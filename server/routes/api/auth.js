@@ -1,25 +1,25 @@
 const express = require('express');
 const router = express.Router();
+const { 
+  register, 
+  login, 
+  getMe, 
+  logout,
+  setup2FA,
+  verify2FA,
+  validate2FA
+} = require('../../controllers/authController');
+const { protect } = require('../../middleware/auth');
 
-// @route    POST api/auth/register
-// @desc     Registrar usuario
-// @access   Public
-router.post('/register', (req, res) => {
-  res.send('Ruta para registrar usuario');
-});
+// Rutas públicas
+router.post('/register', register);
+router.post('/login', login);
+router.post('/2fa/validate', validate2FA);
 
-// @route    POST api/auth/login
-// @desc     Autenticar usuario y obtener token
-// @access   Public
-router.post('/login', (req, res) => {
-  res.send('Ruta para login de usuario');
-});
-
-// @route    GET api/auth/user
-// @desc     Obtener información del usuario actual
-// @access   Private
-router.get('/user', (req, res) => {
-  res.send('Ruta para obtener información del usuario actual');
-});
+// Rutas protegidas
+router.get('/me', protect, getMe);
+router.get('/logout', protect, logout);
+router.get('/2fa/setup', protect, setup2FA);
+router.post('/2fa/verify', protect, verify2FA);
 
 module.exports = router;
