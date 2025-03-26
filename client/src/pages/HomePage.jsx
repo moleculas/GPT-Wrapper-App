@@ -8,8 +8,10 @@ import MainLayout from '../components/layout/MainLayout';
 const HomePage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { isAuthenticated } = useSelector(state => state.auth);
+  const { isAuthenticated, user } = useSelector(state => state.auth);
   const { gpts, loading } = useSelector(state => state.gpts);
+  // Extraer el rol del usuario fuera de cualquier renderizado condicional
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -76,7 +78,7 @@ const HomePage = () => {
           
           {loading ? (
             <Typography>Cargando GPTs...</Typography>
-          ) : gpts.length > 0 ? (
+          ) : gpts && gpts.length > 0 ? (
             <Grid container spacing={3}>
               {gpts.map((gpt) => (
                 <Grid item key={gpt._id} xs={12} sm={6} md={4}>
@@ -111,7 +113,7 @@ const HomePage = () => {
               <Typography variant="body1" gutterBottom>
                 No hay GPTs disponibles todavía.
               </Typography>
-              {useSelector(state => state.auth.user?.role) === 'admin' && (
+              {isAdmin && (
                 <Button 
                   variant="contained" 
                   color="primary"

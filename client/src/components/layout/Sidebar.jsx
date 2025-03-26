@@ -1,10 +1,10 @@
 import React from 'react';
-import { 
-  Drawer, 
-  List, 
-  ListItem, 
-  ListItemIcon, 
-  ListItemText, 
+import {
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
   Divider,
   Typography,
   Box,
@@ -26,7 +26,7 @@ const Sidebar = ({ width }) => {
   const { sidebarOpen } = useSelector(state => state.ui);
   const { gpts, loading } = useSelector(state => state.gpts);
   const { isAuthenticated, user } = useSelector(state => state.auth);
-  
+
   useEffect(() => {
     if (isAuthenticated) {
       dispatch(fetchGPTs());
@@ -43,10 +43,10 @@ const Sidebar = ({ width }) => {
   const sidebarContent = (
     <Box sx={{ width: width, height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Cabecera del Sidebar */}
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between', 
+      <Box sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         p: 2,
         borderBottom: '1px solid rgba(0, 0, 0, 0.12)'
       }}>
@@ -68,10 +68,10 @@ const Sidebar = ({ width }) => {
         {isAuthenticated && (
           <>
             {user?.role === 'admin' && (
-              <ListItem 
-                button
+              <ListItem
+                button={true}
                 onClick={() => handleNavigation('/admin/gpts/new')}
-                sx={{ 
+                sx={{
                   color: 'primary.main',
                   '&:hover': { backgroundColor: 'rgba(16, 163, 127, 0.04)' }
                 }}
@@ -82,9 +82,9 @@ const Sidebar = ({ width }) => {
                 <ListItemText primary="Nuevo GPT" />
               </ListItem>
             )}
-            
+
             <Divider sx={{ my: 1 }} />
-            
+
             {loading ? (
               <ListItem>
                 <ListItemText primary="Cargando GPTs..." />
@@ -92,19 +92,19 @@ const Sidebar = ({ width }) => {
             ) : (
               gpts.length > 0 ? (
                 gpts.map(gpt => (
-                  <ListItem 
-                    button 
+                  <ListItem
+                    button={true}
                     key={gpt._id}
                     onClick={() => handleNavigation(`/gpts/${gpt._id}`)}
                   >
                     <ListItemIcon>
                       <ChatIcon />
                     </ListItemIcon>
-                    <ListItemText 
-                      primary={gpt.name} 
-                      secondary={gpt.description.length > 30 
-                        ? `${gpt.description.substring(0, 30)}...` 
-                        : gpt.description} 
+                    <ListItemText
+                      primary={gpt.name}
+                      secondary={gpt.description.length > 30
+                        ? `${gpt.description.substring(0, 30)}...`
+                        : gpt.description}
                     />
                   </ListItem>
                 ))
@@ -121,8 +121,8 @@ const Sidebar = ({ width }) => {
       {/* Footer del Sidebar */}
       <Box sx={{ borderTop: '1px solid rgba(0, 0, 0, 0.12)' }}>
         <List>
-          <ListItem 
-            button
+          <ListItem
+            button={true}
             onClick={() => handleNavigation('/settings')}
           >
             <ListItemIcon>
@@ -152,7 +152,7 @@ const Sidebar = ({ width }) => {
       >
         {sidebarContent}
       </Drawer>
-      
+
       {/* Versión desktop */}
       <Drawer
         variant="permanent"
