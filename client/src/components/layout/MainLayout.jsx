@@ -1,44 +1,73 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Box, Container, useMediaQuery, useTheme } from '@mui/material';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { setSidebarOpen } from '../../redux/slices/uiSlice';
 
 const MainLayout = ({ children }) => {
   const { sidebarOpen } = useSelector(state => state.ui);
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  const dispatch = useDispatch();
+
+  // Este efecto maneja el redimensionamiento de la ventana
+  useEffect(() => {
+    const handleResize = () => {
+      const isDesktopNow = window.innerWidth >= 960;
+      // En escritorio, siempre abrimos el sidebar si está cerrado
+      if (isDesktopNow && !sidebarOpen) {
+        dispatch(setSidebarOpen(true));
+      }
+    };
+
+    // Ejecutar una vez al iniciar para asegurar el estado correcto
+    handleResize();
+
+    // Escuchar cambios de tamaño de pantalla
+    window.addEventListener('resize', handleResize);
+    
+    // Limpiar el listener cuando el componente se desmonte
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [dispatch, sidebarOpen]);
 
   const sidebarWidth = 280;
+  const navbarHeight = 64;
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh' }}>
-      {/* Sidebar */}
+    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
+      <Navbar sidebarWidth={sidebarWidth} />
+      
       <Sidebar width={sidebarWidth} />
 
-      {/* Contenido principal */}
       <Box
         component="main"
         sx={{
           flexGrow: 1,
-          width: { xs: '100%', md: `calc(100% - ${sidebarWidth}px)` },
-          ml: { xs: 0, md: `${sidebarWidth}px` },
+          width: '100%',
+          ml: { 
+            xs: 0, 
+            md: sidebarOpen ? `${sidebarWidth}px` : 0 
+          },
+          mt: `${navbarHeight}px`,
           transition: theme.transitions.create(['margin', 'width'], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.leavingScreen,
           }),
-          ...(sidebarOpen && {
-            width: { xs: '100%', md: `calc(100% - ${sidebarWidth}px)` },
-            ml: { xs: 0, md: `${sidebarWidth}px` },
-            transition: theme.transitions.create(['margin', 'width'], {
-              easing: theme.transitions.easing.easeOut,
-              duration: theme.transitions.duration.enteringScreen,
-            }),
-          }),
         }}
       >
-        <Navbar />
-        <Container maxWidth="xl" sx={{ mt: 4, mb: 4, height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column' }}>
+        <Container 
+          maxWidth="xl" 
+          sx={{
+            py: 3,
+            height: `calc(100vh - ${navbarHeight}px - 24px)`,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'auto'
+          }}
+        >
           {children}
         </Container>
       </Box>

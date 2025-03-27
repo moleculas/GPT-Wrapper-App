@@ -1,9 +1,9 @@
 import React from 'react';
-import { 
-  AppBar, 
-  Toolbar, 
-  Typography, 
-  IconButton, 
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  IconButton,
   Button,
   Avatar,
   Menu,
@@ -19,36 +19,51 @@ import { toggleSidebar, toggleDarkMode } from '../../redux/slices/uiSlice';
 import { logout } from '../../redux/slices/authSlice';
 import { useNavigate } from 'react-router-dom';
 
-const Navbar = () => {
+const Navbar = ({ sidebarWidth }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { darkMode } = useSelector(state => state.ui);
+  const { darkMode, sidebarOpen } = useSelector(state => state.ui);
   const { user, isAuthenticated } = useSelector(state => state.auth);
-  
+
   const [anchorEl, setAnchorEl] = React.useState(null);
   const open = Boolean(anchorEl);
-  
+
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
   };
-  
+
   const handleClose = () => {
     setAnchorEl(null);
   };
-  
+
   const handleLogout = () => {
     dispatch(logout());
     handleClose();
     navigate('/login');
   };
-  
+
   const handleProfile = () => {
     handleClose();
     navigate('/profile');
   };
-  
+
   return (
-    <AppBar position="static" color="default" elevation={0} sx={{ borderBottom: '1px solid #e0e0e0' }}>
+    <AppBar
+      position="fixed"
+      color="default"
+      elevation={0}
+      sx={{
+        borderBottom: '1px solid #e0e0e0',
+        boxShadow: 'none',
+        zIndex: (theme) => theme.zIndex.drawer + 1,
+        width: { xs: '100%', md: sidebarOpen ? `calc(100% - ${sidebarWidth}px)` : '100%' },
+        ml: { xs: 0, md: sidebarOpen ? `${sidebarWidth}px` : 0 },
+        transition: (theme) => theme.transitions.create(['margin', 'width'], {
+          easing: theme.transitions.easing.sharp,
+          duration: theme.transitions.duration.leavingScreen,
+        }),
+      }}
+    >
       <Toolbar>
         <IconButton
           edge="start"
@@ -59,19 +74,19 @@ const Navbar = () => {
         >
           <MenuIcon />
         </IconButton>
-        
+
         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
           GPT Wrapper
         </Typography>
-        
-        <IconButton 
-          color="inherit" 
+
+        <IconButton
+          color="inherit"
           onClick={() => dispatch(toggleDarkMode())}
           sx={{ mr: 1 }}
         >
           {darkMode ? <LightModeIcon /> : <DarkModeIcon />}
         </IconButton>
-        
+
         {isAuthenticated ? (
           <Box>
             <Tooltip title="Cuenta">

@@ -1,10 +1,10 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-  sidebarOpen: false,
+  sidebarOpen: true, // Inicialmente el sidebar está abierto
   darkMode: false,
   alerts: [],
-  activeView: 'chat' // 'chat', 'admin', 'settings'
+  activeView: 'chat'
 };
 
 const uiSlice = createSlice({
@@ -13,6 +13,9 @@ const uiSlice = createSlice({
   reducers: {
     toggleSidebar: (state) => {
       state.sidebarOpen = !state.sidebarOpen;
+    },
+    setSidebarOpen: (state, action) => {
+      state.sidebarOpen = action.payload;
     },
     toggleDarkMode: (state) => {
       state.darkMode = !state.darkMode;
@@ -36,6 +39,7 @@ const uiSlice = createSlice({
 
 export const {
   toggleSidebar,
+  setSidebarOpen,
   toggleDarkMode,
   setActiveView,
   addAlert,

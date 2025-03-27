@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Drawer,
   List,
   ListItem,
+  ListItemButton,
   ListItemIcon,
   ListItemText,
   Divider,
@@ -17,7 +18,6 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useDispatch, useSelector } from 'react-redux';
 import { toggleSidebar } from '../../redux/slices/uiSlice';
 import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
 import { fetchGPTs } from '../../redux/slices/gptSlice';
 
 const Sidebar = ({ width }) => {
@@ -35,41 +35,31 @@ const Sidebar = ({ width }) => {
 
   const handleNavigation = (path) => {
     navigate(path);
-    if (window.innerWidth < 960) { // Cierra el sidebar en móviles
+    if (window.innerWidth < 960) {
       dispatch(toggleSidebar());
     }
   };
 
   const sidebarContent = (
-    <Box sx={{ width: width, height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Cabecera del Sidebar */}
+    <>
       <Box sx={{
+        height: '64px',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        p: 2,
-        borderBottom: '1px solid rgba(0, 0, 0, 0.12)'
+        alignItems: 'center',       
+        bgcolor: '#f5f5f5',
+        boxShadow: 'none',
+        position: 'relative'
       }}>
-        <Typography variant="h6" component="div">
+        <Typography variant="h6" component="div" sx={{ px: 2 }}>
           Mis GPTs
         </Typography>
-        <IconButton
-          color="inherit"
-          aria-label="close sidebar"
-          onClick={() => dispatch(toggleSidebar())}
-          sx={{ display: { xs: 'block', md: 'none' } }}
-        >
-          <CloseIcon />
-        </IconButton>
       </Box>
 
-      {/* Lista de GPTs */}
-      <List sx={{ flexGrow: 1, overflow: 'auto' }}>
+      <List sx={{ flexGrow: 1, p: 0 }}>
         {isAuthenticated && (
           <>
             {user?.role === 'admin' && (
-              <ListItem
-                button={true}
+              <ListItemButton
                 onClick={() => handleNavigation('/admin/gpts/new')}
                 sx={{
                   color: 'primary.main',
@@ -80,20 +70,19 @@ const Sidebar = ({ width }) => {
                   <AddIcon color="primary" />
                 </ListItemIcon>
                 <ListItemText primary="Nuevo GPT" />
-              </ListItem>
+              </ListItemButton>
             )}
 
-            <Divider sx={{ my: 1 }} />
+            <Divider sx={{ my: 0 }} />
 
             {loading ? (
-              <ListItem>
+              <ListItem sx={{ p: 2 }}>
                 <ListItemText primary="Cargando GPTs..." />
               </ListItem>
             ) : (
               gpts.length > 0 ? (
                 gpts.map(gpt => (
-                  <ListItem
-                    button={true}
+                  <ListItemButton
                     key={gpt._id}
                     onClick={() => handleNavigation(`/gpts/${gpt._id}`)}
                   >
@@ -106,10 +95,10 @@ const Sidebar = ({ width }) => {
                         ? `${gpt.description.substring(0, 30)}...`
                         : gpt.description}
                     />
-                  </ListItem>
+                  </ListItemButton>
                 ))
               ) : (
-                <ListItem>
+                <ListItem sx={{ p: 2 }}>
                   <ListItemText primary="No hay GPTs disponibles" />
                 </ListItem>
               )
@@ -118,26 +107,22 @@ const Sidebar = ({ width }) => {
         )}
       </List>
 
-      {/* Footer del Sidebar */}
-      <Box sx={{ borderTop: '1px solid rgba(0, 0, 0, 0.12)' }}>
-        <List>
-          <ListItem
-            button={true}
-            onClick={() => handleNavigation('/settings')}
-          >
-            <ListItemIcon>
-              <SettingsIcon />
-            </ListItemIcon>
-            <ListItemText primary="Configuración" />
-          </ListItem>
-        </List>
+      <Box sx={{ borderTop: '1px solid #e0e0e0' }}>
+        <ListItemButton
+          onClick={() => handleNavigation('/settings')}
+        >
+          <ListItemIcon>
+            <SettingsIcon />
+          </ListItemIcon>
+          <ListItemText primary="Configuración" />
+        </ListItemButton>
       </Box>
-    </Box>
+    </>
   );
 
   return (
     <>
-      {/* Versión móvil */}
+      {/* Drawer para móvil - siempre temporal */}
       <Drawer
         variant="temporary"
         open={sidebarOpen}
@@ -145,25 +130,27 @@ const Sidebar = ({ width }) => {
         sx={{
           display: { xs: 'block', md: 'none' },
           '& .MuiDrawer-paper': {
-            boxSizing: 'border-box',
             width: width,
+            bgcolor: '#f5f5f5',
+            boxShadow: 'none'
           },
         }}
       >
         {sidebarContent}
       </Drawer>
-
-      {/* Versión desktop */}
+      
+      {/* Drawer para desktop - su visibilidad se controla por el estado */}
       <Drawer
-        variant="permanent"
+        variant="persistent"
+        open={sidebarOpen}
         sx={{
           display: { xs: 'none', md: 'block' },
           '& .MuiDrawer-paper': {
-            boxSizing: 'border-box',
             width: width,
+            bgcolor: '#f5f5f5',
+            boxShadow: 'none'
           },
         }}
-        open
       >
         {sidebarContent}
       </Drawer>
