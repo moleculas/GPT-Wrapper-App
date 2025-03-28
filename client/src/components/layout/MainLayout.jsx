@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Box, Container, useMediaQuery, useTheme } from '@mui/material';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
@@ -10,36 +10,39 @@ const MainLayout = ({ children }) => {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const dispatch = useDispatch();
+  const [userToggled, setUserToggled] = useState(false);
 
-  // Este efecto maneja el redimensionamiento de la ventana
+  const handleToggle = () => {
+    setUserToggled(true);
+    dispatch(setSidebarOpen(!sidebarOpen));
+  };
+
+  useEffect(() => {
+    if (!userToggled) {
+      dispatch(setSidebarOpen(isDesktop));
+    }
+  }, [dispatch, userToggled]);
+
   useEffect(() => {
     const handleResize = () => {
-      const isDesktopNow = window.innerWidth >= 960;
-      // En escritorio, siempre abrimos el sidebar si está cerrado
-      if (isDesktopNow && !sidebarOpen) {
-        dispatch(setSidebarOpen(true));
+      if (!userToggled) {
+        dispatch(setSidebarOpen(isDesktop));
       }
     };
 
-    // Ejecutar una vez al iniciar para asegurar el estado correcto
-    handleResize();
-
-    // Escuchar cambios de tamaño de pantalla
     window.addEventListener('resize', handleResize);
-    
-    // Limpiar el listener cuando el componente se desmonte
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [dispatch, sidebarOpen]);
+  }, [dispatch, userToggled]);
 
   const sidebarWidth = 280;
   const navbarHeight = 64;
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f9f9f9' }}>
-      <Navbar sidebarWidth={sidebarWidth} />
-      
+      <Navbar sidebarWidth={sidebarWidth} handleToggle={handleToggle} />
+
       <Sidebar width={sidebarWidth} />
 
       <Box
@@ -47,9 +50,9 @@ const MainLayout = ({ children }) => {
         sx={{
           flexGrow: 1,
           width: '100%',
-          ml: { 
-            xs: 0, 
-            md: sidebarOpen ? `${sidebarWidth}px` : 0 
+          ml: {
+            xs: 0,
+            md: sidebarOpen ? `${sidebarWidth}px` : 0
           },
           mt: `${navbarHeight}px`,
           transition: theme.transitions.create(['margin', 'width'], {
@@ -58,8 +61,8 @@ const MainLayout = ({ children }) => {
           }),
         }}
       >
-        <Container 
-          maxWidth="xl" 
+        <Container
+          maxWidth="xl"
           sx={{
             py: 3,
             height: `calc(100vh - ${navbarHeight}px - 24px)`,

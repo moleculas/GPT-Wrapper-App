@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-  sidebarOpen: true, // Inicialmente el sidebar está abierto
+  sidebarOpen: true, 
   darkMode: false,
   alerts: [],
   activeView: 'chat'

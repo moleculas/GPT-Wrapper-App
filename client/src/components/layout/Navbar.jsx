@@ -69,7 +69,7 @@ const Navbar = ({ sidebarWidth }) => {
           edge="start"
           color="inherit"
           aria-label="menu"
-          onClick={() => dispatch(toggleSidebar())}
+          onClick={() => { dispatch(toggleSidebar()); }}
           sx={{ mr: 2 }}
         >
           <MenuIcon />
