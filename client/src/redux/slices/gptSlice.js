@@ -31,7 +31,6 @@ export const fetchAllGPTs = createAsyncThunk(
   async (_, { getState, rejectWithValue }) => {
     try {
       const token = getState().auth.token;
-      // Usar el mismo endpoint - para admin ya muestra todos los GPTs
       const response = await axios.get(API_URL, getConfig(token));
       return response.data;
     } catch (error) {
@@ -61,7 +60,8 @@ export const createGPT = createAsyncThunk(
       const response = await axios.post(API_URL, gptData, getConfig(token));
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data);
+      console.error('Error completo en createGPT:', error);
+      return rejectWithValue(error.response?.data || { error: 'Error desconocido' });
     }
   }
 );
@@ -184,6 +184,7 @@ const gptSlice = createSlice({
       .addCase(createGPT.fulfilled, (state, action) => {
         state.loading = false;
         state.gpts = [...state.gpts, action.payload.data];
+        state.currentGPT = action.payload.data;
       })
       .addCase(createGPT.rejected, (state, action) => {
         state.loading = false;

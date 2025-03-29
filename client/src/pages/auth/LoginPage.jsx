@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Button, 
-  TextField, 
-  Typography, 
-  Paper, 
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Paper,
   Container,
   Alert,
   CircularProgress,
@@ -20,76 +20,73 @@ const LoginPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loading, error, isAuthenticated, twoFactorRequired, userId } = useSelector(state => state.auth);
-  
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     twoFactorCode: ''
   });
-  
+
   const [showPassword, setShowPassword] = useState(false);
-  
+
   useEffect(() => {
-    // Limpiar errores cuando se monta el componente
     dispatch(clearError());
-    
-    // Redirigir si ya está autenticado
     if (isAuthenticated) {
       navigate('/');
     }
   }, [isAuthenticated, navigate, dispatch]);
-  
+
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
   };
-  
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     if (twoFactorRequired) {
-      dispatch(validate2FA({ 
-        userId, 
-        token: formData.twoFactorCode 
+      dispatch(validate2FA({
+        userId,
+        token: formData.twoFactorCode
       }));
     } else {
-      dispatch(login({ 
-        email: formData.email, 
-        password: formData.password 
+      dispatch(login({
+        email: formData.email,
+        password: formData.password
       }));
     }
   };
-  
+
   return (
     <Container maxWidth="sm">
-      <Box sx={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
+      <Box sx={{
+        display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         minHeight: '100vh',
         justifyContent: 'center'
       }}>
-        <Paper 
-          elevation={3} 
-          sx={{ 
-            p: 4, 
-            display: 'flex', 
-            flexDirection: 'column', 
-            width: '100%' 
+        <Paper
+          elevation={3}
+          sx={{
+            p: 4,
+            display: 'flex',
+            flexDirection: 'column',
+            width: '100%'
           }}
         >
           <Typography component="h1" variant="h5" align="center" sx={{ mb: 3 }}>
             {twoFactorRequired ? 'Verificación en dos pasos' : 'Iniciar sesión'}
           </Typography>
-          
+
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {error}
             </Alert>
           )}
-          
+
           <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
             {!twoFactorRequired ? (
               <>
@@ -143,7 +140,7 @@ const LoginPage = () => {
                 onChange={handleChange}
               />
             )}
-            
+
             <Button
               type="submit"
               fullWidth
@@ -157,7 +154,7 @@ const LoginPage = () => {
                 twoFactorRequired ? 'Verificar' : 'Iniciar sesión'
               )}
             </Button>
-            
+
             {!twoFactorRequired && (
               <Box sx={{ mt: 2, textAlign: 'center' }}>
                 <Typography variant="body2">

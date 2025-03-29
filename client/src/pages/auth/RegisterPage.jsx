@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Button, 
-  TextField, 
-  Typography, 
-  Paper, 
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Paper,
   Container,
   Alert,
   CircularProgress,
@@ -20,34 +20,29 @@ const RegisterPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loading, error, isAuthenticated } = useSelector(state => state.auth);
-  
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: ''
   });
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [passwordMatch, setPasswordMatch] = useState(true);
-  
+
   useEffect(() => {
-    // Limpiar errores cuando se monta el componente
     dispatch(clearError());
-    
-    // Redirigir si ya está autenticado
     if (isAuthenticated) {
       navigate('/');
     }
   }, [isAuthenticated, navigate, dispatch]);
-  
+
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
-    
-    // Validar coincidencia de contraseñas
     if (e.target.name === 'confirmPassword' || e.target.name === 'password') {
       if (e.target.name === 'confirmPassword') {
         setPasswordMatch(formData.password === e.target.value);
@@ -56,51 +51,50 @@ const RegisterPage = () => {
       }
     }
   };
-  
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    // Validar que las contraseñas coincidan
+
     if (formData.password !== formData.confirmPassword) {
       setPasswordMatch(false);
       return;
     }
-    
+
     dispatch(register({
       name: formData.name,
       email: formData.email,
       password: formData.password
     }));
   };
-  
+
   return (
     <Container maxWidth="sm">
-      <Box sx={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
+      <Box sx={{
+        display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         minHeight: '100vh',
         justifyContent: 'center'
       }}>
-        <Paper 
-          elevation={3} 
-          sx={{ 
-            p: 4, 
-            display: 'flex', 
-            flexDirection: 'column', 
-            width: '100%' 
+        <Paper
+          elevation={3}
+          sx={{
+            p: 4,
+            display: 'flex',
+            flexDirection: 'column',
+            width: '100%'
           }}
         >
           <Typography component="h1" variant="h5" align="center" sx={{ mb: 3 }}>
             Crear cuenta
           </Typography>
-          
+
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {error}
             </Alert>
           )}
-          
+
           <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
             <TextField
               margin="normal"
@@ -163,7 +157,7 @@ const RegisterPage = () => {
               error={!passwordMatch}
               helperText={!passwordMatch ? 'Las contraseñas no coinciden' : ''}
             />
-            
+
             <Button
               type="submit"
               fullWidth
@@ -177,7 +171,7 @@ const RegisterPage = () => {
                 'Registrarse'
               )}
             </Button>
-            
+
             <Box sx={{ mt: 2, textAlign: 'center' }}>
               <Typography variant="body2">
                 ¿Ya tienes una cuenta?{' '}

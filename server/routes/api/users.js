@@ -1,23 +1,31 @@
 const express = require('express');
 const router = express.Router();
+const { protect, authorize } = require('../../middleware/auth');
 const { 
   getUsers, 
   getUser, 
   updateUser, 
   deleteUser 
 } = require('../../controllers/userController');
-const { protect, authorize } = require('../../middleware/auth');
 
-// Proteger todas las rutas
-router.use(protect);
+// @route    GET api/users
+// @desc     Obtener todos los usuarios
+// @access   Private/Admin
+router.get('/', protect, authorize('admin'), getUsers);
 
-// Rutas de administrador
-router.route('/')
-  .get(authorize('admin'), getUsers);
+// @route    GET api/users/:id
+// @desc     Obtener usuario por ID
+// @access   Private/Admin
+router.get('/:id', protect, authorize('admin'), getUser);
 
-router.route('/:id')
-  .get(authorize('admin'), getUser)
-  .put(updateUser) // El controlador ya verifica si puede actualizar
-  .delete(authorize('admin'), deleteUser);
+// @route    PUT api/users/:id
+// @desc     Actualizar usuario
+// @access   Private/Admin o usuario propio
+router.put('/:id', protect, updateUser);
+
+// @route    DELETE api/users/:id
+// @desc     Eliminar usuario
+// @access   Private/Admin
+router.delete('/:id', protect, authorize('admin'), deleteUser);
 
 module.exports = router;

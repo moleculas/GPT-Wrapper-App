@@ -1,12 +1,12 @@
 import React, { useEffect } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Button, 
-  Grid, 
-  Card, 
-  CardContent, 
-  CardMedia, 
+import {
+  Box,
+  Typography,
+  Button,
+  Grid,
+  Card,
+  CardContent,
+  CardMedia,
   CardActionArea,
   Paper,
   Divider
@@ -22,7 +22,6 @@ const HomePage = () => {
   const dispatch = useDispatch();
   const { isAuthenticated, user } = useSelector(state => state.auth);
   const { gpts, loading } = useSelector(state => state.gpts);
-  // Extraer el rol del usuario fuera de cualquier renderizado condicional
   const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
@@ -33,12 +32,12 @@ const HomePage = () => {
 
   if (!isAuthenticated) {
     return (
-      <Box 
-        sx={{ 
-          minHeight: '100vh', 
-          display: 'flex', 
-          flexDirection: 'column', 
-          justifyContent: 'center', 
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
           alignItems: 'center',
           p: 3
         }}
@@ -50,19 +49,19 @@ const HomePage = () => {
           Una interfaz personalizada para interactuar con GPTs de OpenAI
         </Typography>
         <Box sx={{ mt: 4 }}>
-          <Button 
-            variant="contained" 
-            color="primary" 
-            size="large" 
+          <Button
+            variant="contained"
+            color="primary"
+            size="large"
             onClick={() => navigate('/login')}
             sx={{ mx: 1 }}
           >
             Iniciar sesión
           </Button>
-          <Button 
-            variant="outlined" 
-            color="primary" 
-            size="large" 
+          <Button
+            variant="outlined"
+            color="primary"
+            size="large"
             onClick={() => navigate('/register')}
             sx={{ mx: 1 }}
           >
@@ -85,11 +84,11 @@ const HomePage = () => {
 
         {/* Panel de administración - solo visible para administradores */}
         {isAdmin && (
-          <Paper 
+          <Paper
             elevation={0}
-            sx={{ 
-              p: 3, 
-              mb: 4, 
+            sx={{
+              p: 3,
+              mb: 4,
               mt: 2,
               border: '1px solid #e0e0e0',
               borderLeft: '4px solid #10a37f',
@@ -103,25 +102,25 @@ const HomePage = () => {
                 Panel de Administración
               </Typography>
             </Box>
-            
+
             <Divider sx={{ my: 1.5 }} />
-            
+
             <Typography variant="body2" color="text.secondary" paragraph>
               Como administrador, puedes gestionar los GPTs disponibles en la plataforma, importar nuevos GPTs desde OpenAI y controlar quién tiene acceso a ellos.
             </Typography>
-            
+
             <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
-              <Button 
-                variant="contained" 
+              <Button
+                variant="contained"
                 color="primary"
                 onClick={() => navigate('/admin/gpts')}
                 startIcon={<AdminPanelSettingsIcon />}
               >
                 Gestionar GPTs
               </Button>
-              
-              <Button 
-                variant="outlined" 
+
+              <Button
+                variant="outlined"
                 color="primary"
                 onClick={() => navigate('/admin/gpts/new')}
               >
@@ -135,7 +134,7 @@ const HomePage = () => {
           <Typography variant="h5" gutterBottom>
             GPTs disponibles
           </Typography>
-          
+
           {loading ? (
             <Typography>Cargando GPTs...</Typography>
           ) : gpts && gpts.length > 0 ? (
@@ -174,8 +173,8 @@ const HomePage = () => {
                 No hay GPTs disponibles todavía.
               </Typography>
               {isAdmin && (
-                <Button 
-                  variant="contained" 
+                <Button
+                  variant="contained"
                   color="primary"
                   onClick={() => navigate('/admin/gpts/new')}
                   sx={{ mt: 2 }}

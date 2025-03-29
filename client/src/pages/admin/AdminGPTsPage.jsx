@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Typography,
@@ -13,17 +13,20 @@ import {
   IconButton,
   Chip,
   CircularProgress,
-  Tooltip
+  Tooltip,
+  Stack
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import PeopleIcon from '@mui/icons-material/People';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchAllGPTs, deleteGPT } from '../../redux/slices/gptSlice';
 import { addAlert } from '../../redux/slices/uiSlice';
 import MainLayout from '../../components/layout/MainLayout';
+import ConfirmDialog from '../../components/shared/ConfirmDialog';
 
 const AdminGPTsPage = () => {
   const navigate = useNavigate();
@@ -31,8 +34,10 @@ const AdminGPTsPage = () => {
   const { gpts, loading, error } = useSelector(state => state.gpts);
   const { user } = useSelector(state => state.auth);
 
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [gptToDelete, setGptToDelete] = useState(null);
+
   useEffect(() => {
-    // Verificar si el usuario es administrador
     if (user && user.role !== 'admin') {
       navigate('/');
       dispatch(addAlert({
@@ -44,9 +49,14 @@ const AdminGPTsPage = () => {
     }
   }, [dispatch, navigate, user]);
 
-  const handleDelete = (id) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar este GPT de la aplicación? Esta acción no afectará al GPT en OpenAI.')) {
-      dispatch(deleteGPT(id))
+  const handleDeleteClick = (id) => {
+    setGptToDelete(id);
+    setConfirmDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (gptToDelete) {
+      dispatch(deleteGPT(gptToDelete))
         .unwrap()
         .then(() => {
           dispatch(addAlert({
@@ -54,9 +64,9 @@ const AdminGPTsPage = () => {
             type: 'success'
           }));
         })
-        .catch(() => {
+        .catch((error) => {
           dispatch(addAlert({
-            message: 'Error al eliminar el GPT',
+            message: `Error al eliminar el GPT: ${error || 'Desconocido'}`,
             type: 'error'
           }));
         });
@@ -108,61 +118,81 @@ const AdminGPTsPage = () => {
           </Box>
         ) : (
           <TableContainer component={Paper}>
-            <Table>
+            <Table sx={{ tableLayout: 'fixed' }}>
               <TableHead>
                 <TableRow>
-                  <TableCell>Nombre</TableCell>
-                  <TableCell>Descripción</TableCell>
-                  <TableCell>ID en OpenAI</TableCell>
-                  <TableCell>Acceso</TableCell>
-                  <TableCell align="right">Acciones</TableCell>
+                  <TableCell width="20%" align="left" sx={{ verticalAlign: 'top' }}>Nombre</TableCell>
+                  <TableCell width="52%" align="left" sx={{ verticalAlign: 'top' }}>Descripción</TableCell>
+                  <TableCell width="10%" align="center" sx={{ verticalAlign: 'top' }}>Acceso</TableCell>
+                  <TableCell width="18%" align="center" sx={{ verticalAlign: 'top' }}>Acciones</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {gpts.length > 0 ? (
                   gpts.map((gpt) => (
                     <TableRow key={gpt._id}>
-                      <TableCell>{gpt.name}</TableCell>
-                      <TableCell>
-                        {gpt.description.length > 50
-                          ? `${gpt.description.substring(0, 50)}...`
-                          : gpt.description}
+                      <TableCell sx={{
+                        verticalAlign: 'top',
+                        overflowWrap: 'break-word',
+                        wordWrap: 'break-word',
+                        hyphens: 'auto'
+                      }}>
+                        {gpt.name}
                       </TableCell>
-                      <TableCell>
-                        <code>{gpt.openaiId}</code>
+                      <TableCell sx={{
+                        verticalAlign: 'top',
+                        overflowWrap: 'break-word',
+                        wordWrap: 'break-word',
+                        hyphens: 'auto'
+                      }}>
+                        {gpt.description}
                       </TableCell>
-                      <TableCell>
+                      <TableCell align="center" sx={{ verticalAlign: 'top' }}>
                         <Chip
                           label={gpt.isPublic ? 'Público' : 'Privado'}
                           color={gpt.isPublic ? 'success' : 'default'}
                           size="small"
                         />
                       </TableCell>
-                      <TableCell align="right">
-                        <Tooltip title="Ver GPT">
-                          <IconButton
-                            color="primary"
-                            onClick={() => navigate(`/gpts/${gpt._id}`)}
-                          >
-                            <VisibilityIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Editar configuración">
-                          <IconButton
-                            color="info"
-                            onClick={() => navigate(`/admin/gpts/edit/${gpt._id}`)}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Eliminar de la aplicación">
-                          <IconButton
-                            color="error"
-                            onClick={() => handleDelete(gpt._id)}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Tooltip>
+                      <TableCell align="right" sx={{ verticalAlign: 'top' }}>
+                        <Stack direction="row" spacing={0.5} justifyContent="flex-end" sx={{ minWidth: 'fit-content' }}>
+                          <Tooltip title="Ver GPT">
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              onClick={() => navigate(`/gpts/${gpt._id}`)}
+                            >
+                              <VisibilityIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Editar configuración">
+                            <IconButton
+                              size="small"
+                              color="info"
+                              onClick={() => navigate(`/admin/gpts/edit/${gpt._id}`)}
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Editar permisos de acceso">
+                            <IconButton
+                              size="small"
+                              color="success"
+                              onClick={() => navigate(`/admin/gpts/${gpt._id}/permissions`)}
+                            >
+                              <PeopleIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Eliminar de la aplicación">
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => handleDeleteClick(gpt._id)}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
                       </TableCell>
                     </TableRow>
                   ))
@@ -190,6 +220,18 @@ const AdminGPTsPage = () => {
             </Table>
           </TableContainer>
         )}
+
+        {/* Diálogo de confirmación para eliminar GPT */}
+        <ConfirmDialog
+          open={confirmDialogOpen}
+          onClose={() => setConfirmDialogOpen(false)}
+          onConfirm={confirmDelete}
+          title="Eliminar GPT"
+          content="¿Estás seguro de que deseas eliminar este GPT de la aplicación? Esta acción no afectará al GPT en OpenAI."
+          confirmText="Aceptar"
+          cancelText="Cancelar"
+          confirmColor="error"
+        />
       </Box>
     </MainLayout>
   );

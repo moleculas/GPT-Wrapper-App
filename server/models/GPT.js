@@ -14,7 +14,8 @@ const GPTSchema = new mongoose.Schema({
   },
   instructions: {
     type: String,
-    required: [true, 'Por favor proporciona las instrucciones del sistema'],
+    required: false,
+    default: "Eres un asistente de IA útil. Responde de manera precisa y útil a las preguntas del usuario."
   },
   openaiId: {
     type: String,
@@ -53,7 +54,6 @@ const GPTSchema = new mongoose.Schema({
   }
 });
 
-// Middleware para actualizar la fecha de actualización
 GPTSchema.pre('save', function(next) {
   if (!this.isNew) {
     this.updatedAt = Date.now();

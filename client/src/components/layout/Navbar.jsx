@@ -16,7 +16,7 @@ import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import HomeIcon from '@mui/icons-material/Home';
 import SettingsIcon from '@mui/icons-material/Settings';
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'; // Nuevo icono para administración
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import { useDispatch, useSelector } from 'react-redux';
 import { toggleSidebar, toggleDarkMode } from '../../redux/slices/uiSlice';
 import { logout } from '../../redux/slices/authSlice';
@@ -79,12 +79,12 @@ const Navbar = ({ sidebarWidth }) => {
         </IconButton>
 
         {/* Título clickeable para ir a Inicio */}
-        <Typography 
-          variant="h6" 
-          component="div" 
-          sx={{ 
-            flexGrow: 1, 
-            cursor: 'pointer' 
+        <Typography
+          variant="h6"
+          component="div"
+          sx={{
+            flexGrow: 1,
+            cursor: 'pointer'
           }}
           onClick={() => navigate('/')}
         >
@@ -101,7 +101,7 @@ const Navbar = ({ sidebarWidth }) => {
               <HomeIcon />
             </IconButton>
           </Tooltip>
-          
+
           {/* Nuevo icono de administración - solo visible para admins */}
           {isAuthenticated && user?.role === 'admin' && (
             <Tooltip title="Administración">
@@ -113,7 +113,7 @@ const Navbar = ({ sidebarWidth }) => {
               </IconButton>
             </Tooltip>
           )}
-          
+
           {isAuthenticated && (
             <Tooltip title="Configuración">
               <IconButton
@@ -124,7 +124,7 @@ const Navbar = ({ sidebarWidth }) => {
               </IconButton>
             </Tooltip>
           )}
-          
+
           <Tooltip title={darkMode ? "Modo claro" : "Modo oscuro"}>
             <IconButton
               color="inherit"

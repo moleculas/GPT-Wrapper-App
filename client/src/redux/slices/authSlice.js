@@ -3,7 +3,6 @@ import axios from 'axios';
 
 const API_URL = '/api/auth';
 
-// Thunks para acciones asíncronas
 export const register = createAsyncThunk(
   'auth/register',
   async (userData, { rejectWithValue }) => {

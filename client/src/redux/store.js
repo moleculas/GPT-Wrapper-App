@@ -6,18 +6,19 @@ import { combineReducers } from 'redux';
 import authReducer from './slices/authSlice';
 import gptReducer from './slices/gptSlice';
 import uiReducer from './slices/uiSlice';
+import userReducer from './slices/userSlice';
 
-// Configuración de persistencia
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist: ['auth'] // Solo persistimos el estado de autenticación
+  whitelist: ['auth'] 
 };
 
 const rootReducer = combineReducers({
   auth: authReducer,
   gpts: gptReducer,
-  ui: uiReducer
+  ui: uiReducer,
+  users: userReducer
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

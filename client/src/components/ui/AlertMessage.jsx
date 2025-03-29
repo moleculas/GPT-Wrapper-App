@@ -13,7 +13,7 @@ const AlertMessage = () => {
       const timer = setTimeout(() => {
         dispatch(removeAlert(alerts[0].id));
       }, 5000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [alerts, dispatch]);
@@ -23,10 +23,10 @@ const AlertMessage = () => {
   return (
     <Snackbar
       open={alerts.length > 0}
-      anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
     >
-      <Alert 
-        severity={alerts[0].type || 'info'} 
+      <Alert
+        severity={alerts[0].type || 'info'}
         onClose={() => dispatch(removeAlert(alerts[0].id))}
       >
         {alerts[0].message}

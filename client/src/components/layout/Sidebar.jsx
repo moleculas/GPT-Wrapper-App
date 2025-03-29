@@ -47,7 +47,7 @@ const Sidebar = ({ width }) => {
       <Box sx={{
         height: '65px',
         display: 'flex',
-        alignItems: 'center',       
+        alignItems: 'center',
         bgcolor: '#f5f5f5',
         boxShadow: 'none',
         position: 'relative',
@@ -167,7 +167,7 @@ const Sidebar = ({ width }) => {
       >
         {sidebarContent}
       </Drawer>
-      
+
       {/* Drawer para desktop - su visibilidad se controla por el estado */}
       <Drawer
         variant="persistent"

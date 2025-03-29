@@ -13,7 +13,8 @@ import ProfilePage from './pages/user/ProfilePage';
 import GPTChatPage from './pages/GPTChatPage';
 import AdminGPTsPage from './pages/admin/AdminGPTsPage';
 import GPTFormPage from './pages/admin/GPTFormPage';
-import SettingsView from './pages/settings/SettingsView'; // Añadimos el import
+import GPTPermissionsPage from './pages/admin/GPTPermissionsPage';
+import SettingsView from './pages/settings/SettingsView';
 
 // Rutas protegidas
 const PrivateRoute = ({ children }) => {
@@ -65,12 +66,13 @@ function App() {
         <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
         <Route path="/setup-2fa" element={<PrivateRoute><Setup2FAPage /></PrivateRoute>} />
         <Route path="/gpts/:id" element={<PrivateRoute><GPTChatPage /></PrivateRoute>} />
-        <Route path="/settings" element={<PrivateRoute><SettingsView /></PrivateRoute>} /> {/* Añadimos la ruta de configuración */}
+        <Route path="/settings" element={<PrivateRoute><SettingsView /></PrivateRoute>} />
         
         {/* Rutas de administrador */}
         <Route path="/admin/gpts" element={<AdminRoute><AdminGPTsPage /></AdminRoute>} />
         <Route path="/admin/gpts/new" element={<AdminRoute><GPTFormPage /></AdminRoute>} />
         <Route path="/admin/gpts/edit/:id" element={<AdminRoute><GPTFormPage /></AdminRoute>} />
+        <Route path="/admin/gpts/:id/permissions" element={<AdminRoute><GPTPermissionsPage /></AdminRoute>} />
         
         {/* Ruta por defecto (redirecciona a home) */}
         <Route path="*" element={<Navigate to="/" />} />
