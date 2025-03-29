@@ -1,9 +1,21 @@
 import React, { useEffect } from 'react';
-import { Box, Typography, Button, Grid, Card, CardContent, CardMedia, CardActionArea } from '@mui/material';
+import { 
+  Box, 
+  Typography, 
+  Button, 
+  Grid, 
+  Card, 
+  CardContent, 
+  CardMedia, 
+  CardActionArea,
+  Paper,
+  Divider
+} from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchGPTs } from '../redux/slices/gptSlice';
 import MainLayout from '../components/layout/MainLayout';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -71,6 +83,54 @@ const HomePage = () => {
           Selecciona un GPT personalizado para comenzar a chatear o explora los disponibles.
         </Typography>
 
+        {/* Panel de administración - solo visible para administradores */}
+        {isAdmin && (
+          <Paper 
+            elevation={0}
+            sx={{ 
+              p: 3, 
+              mb: 4, 
+              mt: 2,
+              border: '1px solid #e0e0e0',
+              borderLeft: '4px solid #10a37f',
+              bgcolor: '#f9f9f9',
+              borderRadius: 1
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <AdminPanelSettingsIcon sx={{ mr: 1, color: '#10a37f' }} />
+              <Typography variant="h6" component="h2">
+                Panel de Administración
+              </Typography>
+            </Box>
+            
+            <Divider sx={{ my: 1.5 }} />
+            
+            <Typography variant="body2" color="text.secondary" paragraph>
+              Como administrador, puedes gestionar los GPTs disponibles en la plataforma, importar nuevos GPTs desde OpenAI y controlar quién tiene acceso a ellos.
+            </Typography>
+            
+            <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+              <Button 
+                variant="contained" 
+                color="primary"
+                onClick={() => navigate('/admin/gpts')}
+                startIcon={<AdminPanelSettingsIcon />}
+              >
+                Gestionar GPTs
+              </Button>
+              
+              <Button 
+                variant="outlined" 
+                color="primary"
+                onClick={() => navigate('/admin/gpts/new')}
+              >
+                Importar nuevo GPT
+              </Button>
+            </Box>
+          </Paper>
+        )}
+
         <Box sx={{ mt: 4 }}>
           <Typography variant="h5" gutterBottom>
             GPTs disponibles
@@ -120,7 +180,7 @@ const HomePage = () => {
                   onClick={() => navigate('/admin/gpts/new')}
                   sx={{ mt: 2 }}
                 >
-                  Crear nuevo GPT
+                  Importar nuevo GPT
                 </Button>
               )}
             </Box>

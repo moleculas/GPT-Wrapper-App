@@ -11,6 +11,7 @@ import {
   Box,
   IconButton
 } from '@mui/material';
+import HomeIcon from '@mui/icons-material/Home';
 import ChatIcon from '@mui/icons-material/Chat';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AddIcon from '@mui/icons-material/Add';
@@ -42,20 +43,42 @@ const Sidebar = ({ width }) => {
 
   const sidebarContent = (
     <>
+      {/* Header vacío con border-bottom */}
       <Box sx={{
-        height: '64px',
+        height: '65px',
         display: 'flex',
         alignItems: 'center',       
         bgcolor: '#f5f5f5',
         boxShadow: 'none',
-        position: 'relative'
+        position: 'relative',
+        borderBottom: '1px solid #e0e0e0',
       }}>
-        <Typography variant="h6" component="div" sx={{ px: 2 }}>
-          Mis GPTs
-        </Typography>
+        {/* Header en blanco */}
       </Box>
 
-      <List sx={{ flexGrow: 1, p: 0 }}>
+      <List sx={{ p: 0 }}>
+        {/* Botón de Inicio */}
+        <ListItemButton
+          onClick={() => handleNavigation('/')}
+          sx={{
+            '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' }
+          }}
+        >
+          <ListItemIcon>
+            <HomeIcon />
+          </ListItemIcon>
+          <ListItemText primary="Inicio" />
+        </ListItemButton>
+
+        <Divider sx={{ my: 1 }} />
+
+        {/* Título "Mis GPTs" antes del listado */}
+        <ListItem sx={{ px: 2, py: 1 }}>
+          <Typography variant="subtitle2" color="textSecondary">
+            Mis GPTs
+          </Typography>
+        </ListItem>
+
         {isAuthenticated && (
           <>
             {user?.role === 'admin' && (
@@ -107,6 +130,9 @@ const Sidebar = ({ width }) => {
         )}
       </List>
 
+      {/* Espaciador flexible para empujar el botón de configuración al fondo */}
+      <Box sx={{ flexGrow: 1 }} />
+
       <Box sx={{ borderTop: '1px solid #e0e0e0' }}>
         <ListItemButton
           onClick={() => handleNavigation('/settings')}
@@ -132,7 +158,10 @@ const Sidebar = ({ width }) => {
           '& .MuiDrawer-paper': {
             width: width,
             bgcolor: '#f5f5f5',
-            boxShadow: 'none'
+            boxShadow: 'none',
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%'
           },
         }}
       >
@@ -148,7 +177,10 @@ const Sidebar = ({ width }) => {
           '& .MuiDrawer-paper': {
             width: width,
             bgcolor: '#f5f5f5',
-            boxShadow: 'none'
+            boxShadow: 'none',
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%'
           },
         }}
       >

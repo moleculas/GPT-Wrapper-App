@@ -4,7 +4,11 @@ const initialState = {
   sidebarOpen: true, 
   darkMode: false,
   alerts: [],
-  activeView: 'chat'
+  activeView: 'chat',
+  notifications: {  
+    systemAlerts: true,
+    sounds: false
+  }
 };
 
 const uiSlice = createSlice({
@@ -33,6 +37,12 @@ const uiSlice = createSlice({
     },
     removeAlert: (state, action) => {
       state.alerts = state.alerts.filter(alert => alert.id !== action.payload);
+    },    
+    toggleSystemAlerts: (state) => {
+      state.notifications.systemAlerts = !state.notifications.systemAlerts;
+    },
+    toggleNotificationSounds: (state) => {
+      state.notifications.sounds = !state.notifications.sounds;
     }
   }
 });
@@ -43,7 +53,9 @@ export const {
   toggleDarkMode,
   setActiveView,
   addAlert,
-  removeAlert
+  removeAlert,
+  toggleSystemAlerts,  
+  toggleNotificationSounds
 } = uiSlice.actions;
 
 export default uiSlice.reducer;

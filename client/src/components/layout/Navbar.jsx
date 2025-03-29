@@ -14,6 +14,9 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
+import HomeIcon from '@mui/icons-material/Home';
+import SettingsIcon from '@mui/icons-material/Settings';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'; // Nuevo icono para administración
 import { useDispatch, useSelector } from 'react-redux';
 import { toggleSidebar, toggleDarkMode } from '../../redux/slices/uiSlice';
 import { logout } from '../../redux/slices/authSlice';
@@ -75,17 +78,63 @@ const Navbar = ({ sidebarWidth }) => {
           <MenuIcon />
         </IconButton>
 
-        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+        {/* Título clickeable para ir a Inicio */}
+        <Typography 
+          variant="h6" 
+          component="div" 
+          sx={{ 
+            flexGrow: 1, 
+            cursor: 'pointer' 
+          }}
+          onClick={() => navigate('/')}
+        >
           GPT Wrapper
         </Typography>
 
-        <IconButton
-          color="inherit"
-          onClick={() => dispatch(toggleDarkMode())}
-          sx={{ mr: 1 }}
-        >
-          {darkMode ? <LightModeIcon /> : <DarkModeIcon />}
-        </IconButton>
+        {/* Iconos de navegación rápida - visible solo en desktop */}
+        <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
+          <Tooltip title="Inicio">
+            <IconButton
+              color="inherit"
+              onClick={() => navigate('/')}
+            >
+              <HomeIcon />
+            </IconButton>
+          </Tooltip>
+          
+          {/* Nuevo icono de administración - solo visible para admins */}
+          {isAuthenticated && user?.role === 'admin' && (
+            <Tooltip title="Administración">
+              <IconButton
+                color="inherit"
+                onClick={() => navigate('/admin/gpts')}
+              >
+                <AdminPanelSettingsIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+          
+          {isAuthenticated && (
+            <Tooltip title="Configuración">
+              <IconButton
+                color="inherit"
+                onClick={() => navigate('/settings')}
+              >
+                <SettingsIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+          
+          <Tooltip title={darkMode ? "Modo claro" : "Modo oscuro"}>
+            <IconButton
+              color="inherit"
+              onClick={() => dispatch(toggleDarkMode())}
+              sx={{ mr: 1 }}
+            >
+              {darkMode ? <LightModeIcon /> : <DarkModeIcon />}
+            </IconButton>
+          </Tooltip>
+        </Box>
 
         {isAuthenticated ? (
           <Box>
@@ -110,11 +159,6 @@ const Navbar = ({ sidebarWidth }) => {
               }}
             >
               <MenuItem onClick={handleProfile}>Perfil</MenuItem>
-              {user?.role === 'admin' && (
-                <MenuItem onClick={() => { handleClose(); navigate('/admin'); }}>
-                  Administración
-                </MenuItem>
-              )}
               <MenuItem onClick={handleLogout}>Cerrar sesión</MenuItem>
             </Menu>
           </Box>

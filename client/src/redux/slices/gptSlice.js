@@ -26,6 +26,20 @@ export const fetchGPTs = createAsyncThunk(
   }
 );
 
+export const fetchAllGPTs = createAsyncThunk(
+  'gpts/fetchAllAdmin',
+  async (_, { getState, rejectWithValue }) => {
+    try {
+      const token = getState().auth.token;
+      // Usar el mismo endpoint - para admin ya muestra todos los GPTs
+      const response = await axios.get(API_URL, getConfig(token));
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response.data);
+    }
+  }
+);
+
 export const fetchGPT = createAsyncThunk(
   'gpts/fetchOne',
   async (id, { getState, rejectWithValue }) => {
@@ -134,6 +148,21 @@ const gptSlice = createSlice({
         state.loading = false;
         state.error = action.payload?.error || 'Error al cargar GPTs';
       })
+      
+      // Fetch all GPTs for admin
+      .addCase(fetchAllGPTs.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchAllGPTs.fulfilled, (state, action) => {
+        state.loading = false;
+        state.gpts = action.payload.data;
+      })
+      .addCase(fetchAllGPTs.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload?.error || 'Error al cargar todos los GPTs';
+      })
+      
       // Fetch single GPT
       .addCase(fetchGPT.pending, (state) => {
         state.loading = true;

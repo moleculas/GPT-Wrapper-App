@@ -13,6 +13,7 @@ import ProfilePage from './pages/user/ProfilePage';
 import GPTChatPage from './pages/GPTChatPage';
 import AdminGPTsPage from './pages/admin/AdminGPTsPage';
 import GPTFormPage from './pages/admin/GPTFormPage';
+import SettingsView from './pages/settings/SettingsView'; // Añadimos el import
 
 // Rutas protegidas
 const PrivateRoute = ({ children }) => {
@@ -64,6 +65,7 @@ function App() {
         <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
         <Route path="/setup-2fa" element={<PrivateRoute><Setup2FAPage /></PrivateRoute>} />
         <Route path="/gpts/:id" element={<PrivateRoute><GPTChatPage /></PrivateRoute>} />
+        <Route path="/settings" element={<PrivateRoute><SettingsView /></PrivateRoute>} /> {/* Añadimos la ruta de configuración */}
         
         {/* Rutas de administrador */}
         <Route path="/admin/gpts" element={<AdminRoute><AdminGPTsPage /></AdminRoute>} />
