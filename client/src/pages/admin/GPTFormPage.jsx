@@ -7,7 +7,7 @@ import {
   Paper, 
   FormControlLabel,
   Switch,
-  Grid,
+  Stack, // Usar Stack en lugar de Grid
   CircularProgress,
   Alert,
   FormControl,
@@ -105,14 +105,14 @@ const GPTFormPage = () => {
         .unwrap()
         .then(() => {
           dispatch(addAlert({ 
-            message: 'GPT creado correctamente', 
+            message: 'GPT importado correctamente', 
             type: 'success' 
           }));
           navigate('/admin/gpts');
         })
         .catch((error) => {
           dispatch(addAlert({ 
-            message: `Error al crear el GPT: ${error.message || 'Desconocido'}`, 
+            message: `Error al importar el GPT: ${error.message || 'Desconocido'}`, 
             type: 'error' 
           }));
         });
@@ -131,9 +131,9 @@ const GPTFormPage = () => {
   
   return (
     <MainLayout>
-      <Box sx={{ flexGrow: 1, pt: 2 }}>
+      <Box sx={{ flexGrow: 1, p: 3 }}>
         <Typography variant="h4" component="h1" gutterBottom>
-          {isEditMode ? 'Editar GPT' : 'Añadir nuevo GPT'}
+          {isEditMode ? 'Editar GPT' : 'Importar GPT desde OpenAI'}
         </Typography>
         
         {error && (
@@ -142,16 +142,26 @@ const GPTFormPage = () => {
           </Alert>
         )}
         
+        <Paper sx={{ p: 3, mb: 3, bgcolor: '#f9f9f9', borderRadius: 1 }}>
+          <Typography variant="body2" color="text.secondary">
+            {isEditMode
+              ? 'Actualiza la información y configuración de este GPT en la aplicación.'
+              : 'Importa un GPT personalizado desde tu cuenta de OpenAI. El GPT debe existir previamente en tu cuenta empresarial de OpenAI.'}
+          </Typography>
+        </Paper>
+        
         <Paper sx={{ p: 3 }}>
           <Box component="form" onSubmit={handleSubmit}>
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
+            <Stack spacing={3}>
+              <Box>
                 <Typography variant="h6" gutterBottom>
                   Información básica
                 </Typography>
-              </Grid>
+                <Divider sx={{ mb: 2 }} />
+              </Box>
               
-              <Grid item xs={12} md={6}>
+              {/* Primera fila: Nombre y ID de OpenAI */}
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
                 <TextField
                   fullWidth
                   required
@@ -160,10 +170,9 @@ const GPTFormPage = () => {
                   value={formData.name}
                   onChange={handleChange}
                   variant="outlined"
+                  helperText="Nombre con el que aparecerá en la aplicación"
                 />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
+                
                 <TextField
                   fullWidth
                   required
@@ -173,32 +182,32 @@ const GPTFormPage = () => {
                   onChange={handleChange}
                   variant="outlined"
                   helperText="ID único del GPT en OpenAI"
+                  disabled={isEditMode} // No permitir editar el ID en modo edición
                 />
-              </Grid>
+              </Stack>
               
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  required
-                  label="Descripción"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleChange}
-                  variant="outlined"
-                  multiline
-                  rows={2}
-                  helperText="Breve descripción de lo que hace este GPT"
-                />
-              </Grid>
+              <TextField
+                fullWidth
+                required
+                label="Descripción"
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                variant="outlined"
+                multiline
+                rows={2}
+                helperText="Breve descripción de lo que hace este GPT"
+              />
               
-              <Grid item xs={12}>
+              <Box>
                 <Divider sx={{ my: 2 }} />
                 <Typography variant="h6" gutterBottom>
                   Configuración técnica
                 </Typography>
-              </Grid>
+              </Box>
               
-              <Grid item xs={12} md={6}>
+              {/* Segunda fila: Modelo y URL de imagen */}
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
                 <FormControl fullWidth variant="outlined">
                   <InputLabel id="model-select-label">Modelo base</InputLabel>
                   <Select
@@ -214,9 +223,7 @@ const GPTFormPage = () => {
                     <MenuItem value="gpt-3.5-turbo">GPT-3.5 Turbo</MenuItem>
                   </Select>
                 </FormControl>
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
+                
                 <TextField
                   fullWidth
                   label="URL de imagen"
@@ -226,31 +233,29 @@ const GPTFormPage = () => {
                   variant="outlined"
                   helperText="URL de una imagen representativa (opcional)"
                 />
-              </Grid>
+              </Stack>
               
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  required
-                  label="Instrucciones del sistema"
-                  name="instructions"
-                  value={formData.instructions}
-                  onChange={handleChange}
-                  variant="outlined"
-                  multiline
-                  rows={4}
-                  helperText="Instrucciones que definen el comportamiento y conocimiento del GPT"
-                />
-              </Grid>
+              <TextField
+                fullWidth
+                required
+                label="Instrucciones del sistema"
+                name="instructions"
+                value={formData.instructions}
+                onChange={handleChange}
+                variant="outlined"
+                multiline
+                rows={4}
+                helperText="Instrucciones que definen el comportamiento y conocimiento del GPT"
+              />
               
-              <Grid item xs={12}>
+              <Box>
                 <Divider sx={{ my: 2 }} />
                 <Typography variant="h6" gutterBottom>
-                  Permisos
+                  Permisos de acceso
                 </Typography>
-              </Grid>
+              </Box>
               
-              <Grid item xs={12}>
+              <Box>
                 <FormControlLabel
                   control={
                     <Switch
@@ -262,12 +267,17 @@ const GPTFormPage = () => {
                   }
                   label="Disponible para todos los usuarios"
                 />
-              </Grid>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  {formData.isPublic 
+                    ? "Todos los usuarios podrán ver y usar este GPT" 
+                    : "Solo usuarios específicos podrán acceder a este GPT (se configurará en una futura actualización)"}
+                </Typography>
+              </Box>
               
-              <Grid item xs={12} sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
                 <Button
                   variant="outlined"
-                  color="secondary"
+                  color="inherit"
                   onClick={() => navigate('/admin/gpts')}
                   sx={{ mr: 2 }}
                 >
@@ -282,11 +292,11 @@ const GPTFormPage = () => {
                   {loading ? (
                     <CircularProgress size={24} />
                   ) : (
-                    isEditMode ? 'Actualizar GPT' : 'Crear GPT'
+                    isEditMode ? 'Actualizar GPT' : 'Importar GPT'
                   )}
                 </Button>
-              </Grid>
-            </Grid>
+              </Box>
+            </Stack>
           </Box>
         </Paper>
       </Box>
