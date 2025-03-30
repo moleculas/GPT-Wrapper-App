@@ -156,7 +156,7 @@ const AdminGPTsPage = () => {
                       </TableCell>
                       <TableCell align="right" sx={{ verticalAlign: 'top' }}>
                         <Stack direction="row" spacing={0.5} justifyContent="flex-end" sx={{ minWidth: 'fit-content' }}>
-                          <Tooltip title="Ver GPT">
+                          <Tooltip title="Ver Asistente">
                             <IconButton
                               size="small"
                               color="primary"

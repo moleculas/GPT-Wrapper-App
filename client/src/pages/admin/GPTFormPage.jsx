@@ -1,3 +1,5 @@
+// Ruta: client/src/pages/admin/GPTFormPage.jsx
+
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -8,10 +10,6 @@ import {
   Stack,
   CircularProgress,
   Alert,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Divider,
   Autocomplete
 } from '@mui/material';
@@ -34,18 +32,11 @@ const GPTFormPage = () => {
     name: '',
     description: '',
     openaiId: '',
-    model: 'gpt-4',
+    model: '',
     imageUrl: ''
   });
 
   const [selectedGPT, setSelectedGPT] = useState(null);
-
-  useEffect(() => {
-    // Mostrar en consola cuando se cargan los GPTs disponibles
-    if (availableGPTs) {
-      console.log(`GPTs disponibles: ${availableGPTs.length}`, availableGPTs);
-    }
-  }, [availableGPTs]);
 
   useEffect(() => {
     if (user && user.role !== 'admin') {
@@ -60,7 +51,6 @@ const GPTFormPage = () => {
     if (isEditMode) {
       dispatch(fetchGPT(id));
     } else {
-      // Cargar GPTs disponibles desde OpenAI si estamos en modo creación
       dispatch(fetchAvailableGPTs());
     }
   }, [dispatch, navigate, isEditMode, id, user]);
@@ -71,21 +61,18 @@ const GPTFormPage = () => {
         name: currentGPT.name || '',
         description: currentGPT.description || '',
         openaiId: currentGPT.openaiId || '',
-        model: currentGPT.model || 'gpt-4',
+        model: currentGPT.model || '',
         imageUrl: currentGPT.imageUrl || ''
       });
     }
   }, [isEditMode, currentGPT]);
 
-  // Actualizar formulario cuando se selecciona un GPT del autocomplete
   useEffect(() => {
     if (selectedGPT) {
       setFormData(prev => ({
         ...prev,
-        name: selectedGPT.name || '',
-        description: selectedGPT.description || '',
         openaiId: selectedGPT.id || '',
-        model: selectedGPT.model || 'gpt-4'
+        model: selectedGPT.model || ''
       }));
     }
   }, [selectedGPT]);
@@ -199,7 +186,6 @@ const GPTFormPage = () => {
                   onChange={handleChange}
                   variant="outlined"
                   helperText="Nombre con el que aparecerá en la aplicación"
-                  disabled={!isEditMode && selectedGPT !== null}
                 />
 
                 {isEditMode ? (
@@ -222,8 +208,28 @@ const GPTFormPage = () => {
                     value={selectedGPT}
                     onChange={(event, newValue) => {
                       setSelectedGPT(newValue);
+                      if (!newValue) {
+                        setFormData(prev => ({
+                          ...prev,
+                          openaiId: '',
+                          model: ''
+                        }));
+                      }
                     }}
-                    getOptionLabel={(option) => `${option.name} (${option.id})`}
+                    getOptionLabel={(option) => option.name}
+                    renderOption={(props, option) => {
+                      const { key, ...propsWithoutKey } = props;
+                      return (
+                        <li {...propsWithoutKey} key={option.id}>
+                          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                            <Typography variant="body1">{option.name}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {option.id}
+                            </Typography>
+                          </Box>
+                        </li>
+                      );
+                    }}
                     renderInput={(params) => (
                       <TextField
                         {...params}
@@ -263,7 +269,6 @@ const GPTFormPage = () => {
                 multiline
                 rows={2}
                 helperText="Breve descripción de lo que hace este Asistente"
-                disabled={!isEditMode && selectedGPT !== null}
               />
 
               <Box>
@@ -275,22 +280,15 @@ const GPTFormPage = () => {
 
               {/* Segunda fila: Modelo y URL de imagen */}
               <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                <FormControl fullWidth variant="outlined">
-                  <InputLabel id="model-select-label">Modelo base</InputLabel>
-                  <Select
-                    labelId="model-select-label"
-                    id="model"
-                    name="model"
-                    value={formData.model}
-                    onChange={handleChange}
-                    label="Modelo base"
-                    disabled={!isEditMode && selectedGPT !== null}
-                  >
-                    <MenuItem value="gpt-4">GPT-4</MenuItem>
-                    <MenuItem value="gpt-4-turbo">GPT-4 Turbo</MenuItem>
-                    <MenuItem value="gpt-3.5-turbo">GPT-3.5 Turbo</MenuItem>
-                  </Select>
-                </FormControl>
+                <TextField
+                  fullWidth
+                  label="Modelo base"
+                  name="model"
+                  value={formData.model}
+                  variant="outlined"
+                  helperText="Modelo base del Asistente"
+                  disabled={true}
+                />
 
                 <TextField
                   fullWidth

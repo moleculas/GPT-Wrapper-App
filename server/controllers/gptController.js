@@ -1,4 +1,6 @@
 const GPT = require('../models/GPT');
+const Thread = require('../models/Thread');
+const User = require('../models/User');
 const axios = require('axios');
 const { OpenAI } = require('openai');
 
@@ -14,7 +16,6 @@ exports.getGPTs = async (req, res) => {
   try {
     let query;
 
-    // Si el usuario no es admin, solo ve GPTs públicos o creados por él
     if (req.user.role !== 'admin') {
       query = {
         $or: [
@@ -60,7 +61,6 @@ exports.getGPT = async (req, res) => {
       });
     }
 
-    // Verificar si el usuario tiene acceso a este GPT
     if (
       req.user.role !== 'admin' &&
       !gpt.isPublic &&
@@ -90,25 +90,16 @@ exports.getGPT = async (req, res) => {
 // @access  Private (Admin)
 exports.createGPT = async (req, res) => {
   try {
-    // Añadir usuario a req.body
     req.body.createdBy = req.user.id;
 
-    // Añadir instrucciones por defecto si no se proporcionan
-    if (!req.body.instructions) {
-      req.body.instructions = "Eres un asistente de IA útil. Responde de manera precisa y útil a las preguntas del usuario.";
-    }
-
-    // Si allowedUsers no está definido, inicializarlo como array vacío
     if (!req.body.allowedUsers) {
       req.body.allowedUsers = [];
     }
 
-    // Asegurarse de que el creador tenga permiso (si no es público)
     if (!req.body.isPublic && !req.body.allowedUsers.includes(req.user.id)) {
       req.body.allowedUsers.push(req.user.id);
     }
 
-    // Comprobar si existe un GPT con el mismo openaiId
     const existingGPT = await GPT.findOne({ openaiId: req.body.openaiId });
     if (existingGPT) {
       return res.status(400).json({
@@ -116,7 +107,6 @@ exports.createGPT = async (req, res) => {
         error: 'Ya existe un GPT con ese ID de OpenAI'
       });
     }
-
     const gpt = await GPT.create(req.body);
 
     res.status(201).json({
@@ -145,7 +135,6 @@ exports.updateGPT = async (req, res) => {
       });
     }
 
-    // Verificar si el usuario puede modificar este GPT
     if (req.user.role !== 'admin' && gpt.createdBy.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -153,7 +142,6 @@ exports.updateGPT = async (req, res) => {
       });
     }
 
-    // Asegurar que el creador siempre tenga permiso (si no es público)
     if (req.body.allowedUsers && !req.body.isPublic) {
       const creatorId = gpt.createdBy.toString();
       if (!req.body.allowedUsers.includes(creatorId)) {
@@ -161,7 +149,6 @@ exports.updateGPT = async (req, res) => {
       }
     }
 
-    // Actualizar GPT
     gpt = await GPT.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true
@@ -193,7 +180,6 @@ exports.deleteGPT = async (req, res) => {
       });
     }
 
-    // Verificar si el usuario puede eliminar este GPT
     if (req.user.role !== 'admin' && gpt.createdBy.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -230,7 +216,6 @@ exports.chatWithGPT = async (req, res) => {
       });
     }
 
-    // Verificar si el usuario tiene acceso a este GPT
     if (
       req.user.role !== 'admin' &&
       !gpt.isPublic &&
@@ -246,19 +231,11 @@ exports.chatWithGPT = async (req, res) => {
     // Aquí iría la integración con la API de OpenAI
     // Este es un ejemplo simplificado
     try {
-      // Usar instrucciones por defecto si no están establecidas
-      const systemInstructions = gpt.instructions || "Eres un asistente de IA útil. Responde de manera precisa y útil a las preguntas del usuario.";
-
-      // Configuración de la petición a OpenAI
       const openaiResponse = await axios.post(
         'https://api.openai.com/v1/chat/completions',
         {
           model: gpt.model,
           messages: [
-            {
-              role: 'system',
-              content: systemInstructions
-            },
             {
               role: 'user',
               content: message
@@ -297,37 +274,29 @@ exports.chatWithGPT = async (req, res) => {
 // @access  Private (Admin)
 exports.getAvailableGPTs = async (req, res) => {
   try {
-    // Verificar que el usuario sea administrador
     if (req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
         error: 'Solo los administradores pueden acceder a esta funcionalidad'
       });
     }
-    console.log('Obteniendo GPTs disponibles desde OpenAI...');
-    // Obtener la lista de asistentes (GPTs) disponibles en OpenAI
     const assistants = await openai.beta.assistants.list({
       limit: 100,
       order: 'desc'
     });
-    console.log('Respuesta de OpenAI:', JSON.stringify(assistants, null, 2));
-
     if (!assistants || !assistants.data) {
-      console.log('No se encontraron datos o estructura inesperada');
       return res.status(200).json({
         success: true,
         count: 0,
         data: []
       });
     }
-    // Filtrar y dar formato a los resultados
     const formattedAssistants = assistants.data.map(assistant => ({
       id: assistant.id,
       name: assistant.name || 'GPT sin nombre',
       description: assistant.description || '',
       model: assistant.model
     }));
-    console.log(`Se encontraron ${formattedAssistants.length} GPTs disponibles`);
     res.status(200).json({
       success: true,
       count: formattedAssistants.length,
@@ -338,6 +307,257 @@ exports.getAvailableGPTs = async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Error al obtener GPTs disponibles',
+      details: err.message
+    });
+  }
+};
+
+// Nuevos métodos para trabajar con threads de la API de Asistentes
+
+// @desc    Crear un nuevo thread
+// @route   POST /api/gpts/threads
+// @access  Private
+// Ruta: server/controllers/gptController.js
+
+exports.createThread = async (req, res) => {
+  try {
+    const gptId = req.params.id || req.body.gptId;
+
+    if (!gptId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Se requiere un ID de GPT'
+      });
+    }
+
+    const gpt = await GPT.findById(gptId);
+    if (!gpt) {
+      return res.status(404).json({
+        success: false,
+        error: 'GPT no encontrado'
+      });
+    }
+    
+    if (
+      req.user.role !== 'admin' &&
+      !gpt.isPublic &&
+      gpt.createdBy.toString() !== req.user.id &&
+      !gpt.allowedUsers.includes(req.user.id)
+    ) {
+      return res.status(403).json({
+        success: false,
+        error: 'No tienes permiso para usar este GPT'
+      });
+    }
+    
+    let threadDoc = await Thread.findOne({
+      userId: req.user.id,
+      gptId: gptId
+    });
+
+    if (threadDoc) {
+            threadDoc.lastActivityAt = Date.now();
+      await threadDoc.save();
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          id: threadDoc.openaiThreadId
+        }
+      });
+    }
+    
+    const user = await User.findById(req.user.id);
+    
+    const openaiThread = await openai.beta.threads.create();
+    
+    await openai.beta.threads.messages.create(openaiThread.id, {
+      role: "user",
+      content: `Utiliza el nombre del usuario "${user.name}" para saludarlo en el primer mensaje de cada conversación (por ejemplo: "Hola, ${user.name}"). No es necesario que lo menciones en cada mensaje posterior, solo úsalo de manera natural cuando la conversación lo requiera. Esta es una instrucción del sistema.`, metadata: { system_instruction: "true" }
+    });
+
+    const run = await openai.beta.threads.runs.create(openaiThread.id, {
+      assistant_id: gpt.openaiId
+    });
+
+    await waitForRunCompletion(openaiThread.id, run.id);
+
+    threadDoc = await Thread.create({
+      userId: req.user.id,
+      gptId: gptId,
+      openaiThreadId: openaiThread.id
+    });
+
+    res.status(201).json({
+      success: true,
+      data: {
+        id: openaiThread.id
+      }
+    });
+  } catch (err) {
+    console.error('Error al crear thread:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Error al crear el hilo de conversación',
+      details: err.message
+    });
+  }
+};
+
+async function waitForRunCompletion(threadId, runId) {
+  let runStatus;
+  let attempts = 0;
+  const maxAttempts = 30;
+
+  do {
+    runStatus = await openai.beta.threads.runs.retrieve(threadId, runId);
+    if (runStatus.status === 'completed' ||
+      runStatus.status === 'failed' ||
+      runStatus.status === 'cancelled' ||
+      runStatus.status === 'expired') {
+      break;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    attempts++;
+  } while (attempts < maxAttempts);
+
+  return runStatus;
+}
+
+// @desc    Obtener mensajes de un thread
+// @route   GET /api/gpts/threads/:threadId/messages
+// @access  Private
+exports.getThreadMessages = async (req, res) => {
+  try {
+    const { threadId } = req.params;
+
+    const messages = await openai.beta.threads.messages.list(threadId);
+
+    res.status(200).json({
+      success: true,
+      data: messages.data.reverse()
+    });
+  } catch (err) {
+    console.error('Error al obtener mensajes del thread:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Error al obtener los mensajes',
+      details: err.message
+    });
+  }
+};
+
+// @desc    Eliminar thread de un usuario y GPT específicos
+// @route   DELETE /api/gpts/:id/threads
+// @access  Private
+exports.deleteGPTThreads = async (req, res) => {
+  try {
+    const gptId = req.params.id;
+    const userId = req.user.id;
+
+    const threads = await Thread.find({
+      userId: userId,
+      gptId: gptId
+    });
+
+    if (threads.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'No se encontraron conversaciones para resetear'
+      });
+    }
+
+    for (const thread of threads) {
+      try {
+        await openai.beta.threads.del(thread.openaiThreadId);
+      } catch (openaiError) {
+        console.error(`Error eliminando thread ${thread.openaiThreadId} en OpenAI:`, openaiError);
+      }
+    }
+
+    await Thread.deleteMany({
+      userId: userId,
+      gptId: gptId
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Se han eliminado ${threads.length} conversaciones`
+    });
+  } catch (err) {
+    console.error('Error al eliminar threads:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Error al resetear la memoria de conversación',
+      details: err.message
+    });
+  }
+};
+
+// @desc    Enviar mensaje a un asistente en un thread específico
+// @route   POST /api/gpts/:id/threads/:threadId/messages
+// @access  Private
+exports.sendMessageToAssistant = async (req, res) => {
+  try {
+    const { id, threadId } = req.params;
+    const { message, files } = req.body;
+
+    const gpt = await GPT.findById(id);
+    if (!gpt) {
+      return res.status(404).json({
+        success: false,
+        error: 'Asistente no encontrado'
+      });
+    }
+
+    if (
+      req.user.role !== 'admin' &&
+      !gpt.isPublic &&
+      gpt.createdBy.toString() !== req.user.id &&
+      !gpt.allowedUsers.includes(req.user.id)
+    ) {
+      return res.status(403).json({
+        success: false,
+        error: 'No tienes permiso para usar este asistente'
+      });
+    }
+
+    await openai.beta.threads.messages.create(threadId, {
+      role: "user",
+      content: message
+    });
+
+    const run = await openai.beta.threads.runs.create(threadId, {
+      assistant_id: gpt.openaiId
+    });
+
+    let runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
+
+    while (runStatus.status === 'queued' || runStatus.status === 'in_progress') {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
+    }
+
+    if (runStatus.status === 'completed') {
+      const messages = await openai.beta.threads.messages.list(threadId);
+
+      res.status(200).json({
+        success: true,
+        data: messages.data.reverse()
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: `La ejecución terminó con estado: ${runStatus.status}`,
+        details: runStatus
+      });
+    }
+  } catch (err) {
+    console.error('Error al enviar mensaje al asistente:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Error al procesar el mensaje',
       details: err.message
     });
   }

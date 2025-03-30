@@ -3,69 +3,91 @@ import {
   Box,
   Typography,
   TextField,
-  Button,
   Paper,
   Avatar,
   CircularProgress,
   IconButton,
-  Divider
+  Button
 } from '@mui/material';
-import SendIcon from '@mui/icons-material/Send';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
+import ResetIcon from '@mui/icons-material/RestartAlt';
 import { useParams } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { fetchGPT, chatWithGPT, clearChatResponse } from '../redux/slices/gptSlice';
+import ReactMarkdown from 'react-markdown';
+import {
+  fetchGPT,
+  createThread,
+  sendMessageToAssistant,
+  getThreadMessages,
+  resetGPTMemory
+} from '../redux/slices/gptSlice';
 import MainLayout from '../components/layout/MainLayout';
+import ConfirmDialog from '../components/shared/ConfirmDialog';
 
 const GPTChatPage = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
   const { currentGPT, loading: gptLoading } = useSelector(state => state.gpts);
-  const { response, loading: chatLoading, error } = useSelector(state => state.gpts.chat);
+  const { threadId, messages, loading: chatLoading, error } = useSelector(state => state.gpts.chat || {});
 
   const [message, setMessage] = useState('');
-  const [conversation, setConversation] = useState([]);
   const [files, setFiles] = useState([]);
+  const [initializing, setInitializing] = useState(true);
+  const [messageLimit, setMessageLimit] = useState(10);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (id) {
-      dispatch(fetchGPT(id));
-      dispatch(clearChatResponse());
+      dispatch(fetchGPT(id))
+        .then(() => {
+          return dispatch(createThread(id));
+        })
+        .then((result) => {
+          if (result?.payload?.data?.id) {
+            return dispatch(getThreadMessages(result.payload.data.id));
+          } else if (threadId) {
+            return dispatch(getThreadMessages(threadId));
+          }
+        })
+        .catch((error) => {
+          console.error("Error inicializando chat:", error);
+        })
+        .finally(() => {
+          setInitializing(false);
+        });
     }
   }, [dispatch, id]);
 
   useEffect(() => {
-    if (response) {
-      const assistantMessage = response.choices && response.choices[0]
-        ? response.choices[0].message.content
-        : 'No pude generar una respuesta. Por favor, intenta de nuevo.';
-
-      setConversation(prev => [
-        ...prev,
-        { role: 'assistant', content: assistantMessage }
-      ]);
-    }
-  }, [response]);
-
-  useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [conversation]);
+  }, [messages]);
 
   const handleSendMessage = (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
 
     if (!message.trim() && files.length === 0) return;
-    setConversation(prev => [
-      ...prev,
-      { role: 'user', content: message, files: files }
-    ]);
 
-    dispatch(chatWithGPT({ id, message, files }));
+    dispatch(sendMessageToAssistant({
+      gptId: id,
+      threadId,
+      message,
+      files
+    }));
+
     setMessage('');
     setFiles([]);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
   };
 
   const handleFileChange = (e) => {
@@ -73,29 +95,153 @@ const GPTChatPage = () => {
     setFiles(prev => [...prev, ...newFiles]);
   };
 
+  const handleResetConfirm = () => {
+    dispatch(resetGPTMemory(id))
+      .then(() => {
+        return dispatch(createThread(id));
+      })
+      .then((result) => {
+        if (result?.payload?.data?.id) {
+          return dispatch(getThreadMessages(result.payload.data.id));
+        }
+      })
+      .then(() => {
+        setInitializing(false);
+      })
+      .catch((error) => {
+        setInitializing(false);
+      });
+  };
+
+  const handleResetButtonClick = () => {
+    setResetDialogOpen(true);
+  };
+
+  const renderMessage = (msg) => {
+    const isUser = msg.role === 'user';
+    const messageContent = msg.content[0]?.text?.value || "";
+
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          mb: 2,
+          alignItems: 'flex-start'
+        }}
+      >
+        <Avatar
+          sx={{
+            mr: 2,
+            bgcolor: isUser ? 'primary.main' : 'secondary.main'
+          }}
+        >
+          {isUser ? 'U' : 'AI'}
+        </Avatar>
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2,
+            maxWidth: '70%',
+            backgroundColor: isUser ? 'rgba(16, 163, 127, 0.1)' : 'background.paper',
+            borderRadius: '8px'
+          }}
+        >
+          {isUser ? (
+            <Typography variant="body1" style={{ whiteSpace: 'pre-wrap' }}>
+              {messageContent}
+            </Typography>
+          ) : (
+            <ReactMarkdown
+              components={{
+                p: ({ node, ...props }) => <Typography variant="body1" gutterBottom {...props} />,
+                h1: ({ node, ...props }) => <Typography variant="h6" gutterBottom {...props} />,
+                h2: ({ node, ...props }) => <Typography variant="subtitle1" gutterBottom {...props} />,
+                h3: ({ node, ...props }) => <Typography variant="subtitle2" gutterBottom {...props} />,
+                ul: ({ node, ...props }) => <Box component="ul" sx={{ pl: 2 }} {...props} />,
+                ol: ({ node, ...props }) => <Box component="ol" sx={{ pl: 2 }} {...props} />,
+                li: ({ node, ...props }) => <Typography component="li" variant="body1" gutterBottom {...props} />,
+                code: ({ node, inline, ...props }) =>
+                  inline ?
+                    <Typography component="code" variant="body2" sx={{ fontFamily: 'monospace', bgcolor: 'rgba(0, 0, 0, 0.05)', p: 0.5, borderRadius: 1 }} {...props} /> :
+                    <Box component="pre" sx={{ p: 1.5, bgcolor: 'rgba(0, 0, 0, 0.05)', borderRadius: 1, overflow: 'auto', maxWidth: '100%' }}>
+                      <Typography component="code" variant="body2" sx={{ fontFamily: 'monospace' }} {...props} />
+                    </Box>
+              }}
+            >
+              {messageContent}
+            </ReactMarkdown>
+          )}
+        </Paper>
+      </Box>
+    );
+  };
+
+  const visibleMessages = messages ? messages.filter(msg =>
+    msg.metadata?.system_instruction !== "true"
+  ) : [];
+
+  if (gptLoading || initializing) {
+    return (
+      <MainLayout>
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          overflow: 'hidden'
+        }}>
+          <CircularProgress />
+        </Box>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <Box sx={{
-        flexGrow: 1,
         display: 'flex',
         flexDirection: 'column',
-        height: 'calc(100vh - 130px)'
+        height: '100vh',
+        overflow: 'hidden' // Evitar scroll en el contenedor principal
       }}>
-        {gptLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}>
-            <CircularProgress />
-          </Box>
-        ) : currentGPT ? (
+        {currentGPT ? (
           <>
             {/* Cabecera del chat */}
-            <Box sx={{ p: 2, borderBottom: '1px solid rgba(0, 0, 0, 0.12)' }}>
-              <Typography variant="h6">{currentGPT.name}</Typography>
-              <Typography variant="body2" color="textSecondary">
-                {currentGPT.description}
-              </Typography>
+            <Box sx={{
+              p: 2,
+              borderBottom: '1px solid rgba(0, 0, 0, 0.12)',
+              flexShrink: 0,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <Box>
+                <Typography variant="h6">{currentGPT.name}</Typography>
+                <Typography variant="body2" color="textSecondary">
+                  {currentGPT.description}
+                </Typography>
+              </Box>
+
+              {/* Botón de reseteo de memoria - solo visible si hay mensajes */}
+              {visibleMessages && visibleMessages.length > 0 && (
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  size="small"
+                  onClick={handleResetButtonClick}
+                  disabled={chatLoading}
+                  startIcon={<ResetIcon />}
+                  sx={{
+                    borderRadius: '8px',
+                    fontSize: '0.75rem'
+                  }}
+                >
+                  Resetear memoria
+                </Button>
+              )}
             </Box>
 
-            {/* Área de conversación */}
+            {/* Área de conversación (único lugar con scroll) */}
             <Box sx={{
               flexGrow: 1,
               overflow: 'auto',
@@ -103,7 +249,7 @@ const GPTChatPage = () => {
               display: 'flex',
               flexDirection: 'column'
             }}>
-              {conversation.length === 0 ? (
+              {!visibleMessages || visibleMessages.length === 0 ? (
                 <Box sx={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -117,46 +263,40 @@ const GPTChatPage = () => {
                   </Typography>
                 </Box>
               ) : (
-                conversation.map((msg, index) => (
-                  <Box
-                    key={index}
-                    sx={{
-                      display: 'flex',
-                      mb: 2,
-                      alignItems: 'flex-start'
-                    }}
-                  >
-                    <Avatar
-                      sx={{
-                        mr: 2,
-                        bgcolor: msg.role === 'user' ? 'primary.main' : 'secondary.main'
-                      }}
-                    >
-                      {msg.role === 'user' ? 'U' : 'AI'}
-                    </Avatar>
-                    <Paper
-                      elevation={0}
-                      sx={{
-                        p: 2,
-                        maxWidth: '70%',
-                        backgroundColor: msg.role === 'user' ? 'rgba(16, 163, 127, 0.1)' : 'background.paper',
-                        borderRadius: '8px'
-                      }}
-                    >
-                      <Typography variant="body1" style={{ whiteSpace: 'pre-wrap' }}>
-                        {msg.content}
-                      </Typography>
+                <>
+                  {visibleMessages.length > messageLimit && (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                      <Button
+                        variant="text"
+                        onClick={() => setMessageLimit(prev => prev + 10)}
+                        sx={{ fontSize: '0.85rem' }}
+                      >
+                        Cargar mensajes anteriores
+                      </Button>
+                    </Box>
+                  )}
 
-                      {msg.files && msg.files.length > 0 && (
-                        <Box sx={{ mt: 1 }}>
-                          <Typography variant="caption">
-                            Archivos adjuntos: {msg.files.map(f => f.name).join(', ')}
-                          </Typography>
-                        </Box>
-                      )}
-                    </Paper>
-                  </Box>
-                ))
+                  {visibleMessages.length > messageLimit && (
+                    <Box sx={{
+                      p: 1,
+                      mb: 2,
+                      bgcolor: 'rgba(0, 0, 0, 0.05)',
+                      borderRadius: '8px',
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption">
+                        Conversación basada en {visibleMessages.length} mensajes. Mostrando los {messageLimit} más recientes.
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {/* Mostrar solo los últimos 'messageLimit' mensajes visibles */}
+                  {visibleMessages.slice(-messageLimit).map((msg) => (
+                    <Box key={msg.id}>
+                      {renderMessage(msg)}
+                    </Box>
+                  ))}
+                </>
               )}
 
               {chatLoading && (
@@ -182,20 +322,23 @@ const GPTChatPage = () => {
               <div ref={chatEndRef} />
             </Box>
 
-            {/* Área de entrada de mensajes */}
-            <Box sx={{ p: 2, borderTop: '1px solid rgba(0, 0, 0, 0.12)' }}>
+            {/* Área de entrada de mensajes (sin línea divisoria) */}
+            <Box sx={{
+              p: 2,
+              flexShrink: 0 // Evitar que el área de entrada se encoja
+            }}>
               {files.length > 0 && (
                 <Box sx={{ mb: 1 }}>
                   <Typography variant="caption">
                     Archivos: {files.map(f => f.name).join(', ')}
-                    <Button
+                    <IconButton
                       size="small"
                       color="secondary"
                       onClick={() => setFiles([])}
                       sx={{ ml: 1 }}
                     >
-                      Limpiar
-                    </Button>
+                      ×
+                    </IconButton>
                   </Typography>
                 </Box>
               )}
@@ -206,14 +349,23 @@ const GPTChatPage = () => {
                   placeholder="Escribe un mensaje..."
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
+                  onKeyDown={handleKeyDown}
                   variant="outlined"
-                  sx={{ mr: 1 }}
+                  multiline
+                  maxRows={4}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '8px',
+                      backgroundColor: theme => theme.palette.background.paper,
+                    }
+                  }}
                   disabled={chatLoading}
                   InputProps={{
                     endAdornment: (
                       <IconButton
                         onClick={() => fileInputRef.current.click()}
                         disabled={chatLoading}
+                        edge="end"
                       >
                         <AttachFileIcon />
                       </IconButton>
@@ -227,24 +379,26 @@ const GPTChatPage = () => {
                   style={{ display: 'none' }}
                   onChange={handleFileChange}
                 />
-                <Button
-                  variant="contained"
-                  color="primary"
-                  endIcon={<SendIcon />}
-                  type="submit"
-                  disabled={(!message.trim() && files.length === 0) || chatLoading}
-                >
-                  Enviar
-                </Button>
               </form>
             </Box>
           </>
         ) : (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}>
-            <Typography>GPT no encontrado</Typography>
+            <Typography>Asistente no encontrado</Typography>
           </Box>
         )}
       </Box>
+      {/* Diálogo de confirmación para resetear memoria */}
+      <ConfirmDialog
+        open={resetDialogOpen}
+        onClose={() => setResetDialogOpen(false)}
+        onConfirm={handleResetConfirm}
+        title="Resetear memoria de conversación"
+        content="¿Estás seguro de que deseas eliminar toda la memoria de esta conversación con el asistente? Esta acción no se puede deshacer y se perderá todo el historial."
+        confirmText="Resetear"
+        cancelText="Cancelar"
+        confirmColor="primary"
+      />
     </MainLayout>
   );
 };

@@ -11,12 +11,7 @@ const GPTSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Por favor proporciona una descripción'],
     maxlength: [500, 'La descripción no puede tener más de 500 caracteres']
-  },
-  instructions: {
-    type: String,
-    required: false,
-    default: "Eres un asistente de IA útil. Responde de manera precisa y útil a las preguntas del usuario."
-  },
+  }, 
   openaiId: {
     type: String,
     required: [true, 'Es necesario el ID de OpenAI'],

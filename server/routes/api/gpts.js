@@ -7,19 +7,20 @@ const {
    updateGPT,
    deleteGPT,
    chatWithGPT,
-   getAvailableGPTs
+   getAvailableGPTs,
+   createThread,
+   getThreadMessages,
+   sendMessageToAssistant,
+   deleteGPTThreads
 } = require('../../controllers/gptController');
 const { protect, authorize } = require('../../middleware/auth');
 
-// Proteger todas las rutas
 router.use(protect);
 
-// Rutas de GPTs
 router.route('/')
   .get(getGPTs)
   .post(authorize('admin'), createGPT);
 
-// Ruta para obtener GPTs disponibles desde OpenAI (solo para administradores)
 router.get('/available', authorize('admin'), getAvailableGPTs);
 
 router.route('/:id')
@@ -27,7 +28,16 @@ router.route('/:id')
   .put(updateGPT)
   .delete(deleteGPT);
 
-// Ruta para chatear con un GPT
 router.post('/:id/chat', chatWithGPT);
+
+router.post('/threads', createThread); 
+
+router.post('/:id/threads', createThread);
+
+router.get('/threads/:threadId/messages', getThreadMessages);
+
+router.post('/:id/threads/:threadId/messages', sendMessageToAssistant);
+
+router.delete('/:id/threads', deleteGPTThreads);
 
 module.exports = router;
