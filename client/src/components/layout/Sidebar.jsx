@@ -75,7 +75,7 @@ const Sidebar = ({ width }) => {
         {/* Título "Mis GPTs" antes del listado */}
         <ListItem sx={{ px: 2, py: 1 }}>
           <Typography variant="subtitle2" color="textSecondary">
-            Mis GPTs
+            Mis Asistentes
           </Typography>
         </ListItem>
 
@@ -92,7 +92,7 @@ const Sidebar = ({ width }) => {
                 <ListItemIcon>
                   <AddIcon color="primary" />
                 </ListItemIcon>
-                <ListItemText primary="Nuevo GPT" />
+                <ListItemText primary="Nuevo Asistente" />
               </ListItemButton>
             )}
 

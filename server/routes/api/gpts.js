@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { 
-  getGPTs, 
-  getGPT, 
-  createGPT, 
-  updateGPT, 
-  deleteGPT,
-  chatWithGPT
+const {
+   getGPTs,
+   getGPT,
+   createGPT,
+   updateGPT,
+   deleteGPT,
+   chatWithGPT,
+   getAvailableGPTs
 } = require('../../controllers/gptController');
 const { protect, authorize } = require('../../middleware/auth');
 
@@ -17,6 +18,9 @@ router.use(protect);
 router.route('/')
   .get(getGPTs)
   .post(authorize('admin'), createGPT);
+
+// Ruta para obtener GPTs disponibles desde OpenAI (solo para administradores)
+router.get('/available', authorize('admin'), getAvailableGPTs);
 
 router.route('/:id')
   .get(getGPT)

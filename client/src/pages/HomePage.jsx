@@ -43,10 +43,10 @@ const HomePage = () => {
         }}
       >
         <Typography variant="h2" component="h1" gutterBottom align="center">
-          GPT Wrapper App
+          Assistant Wrapper App
         </Typography>
         <Typography variant="h5" color="textSecondary" paragraph align="center">
-          Una interfaz personalizada para interactuar con GPTs de OpenAI
+          Una interfaz personalizada para interactuar con asistentes de OpenAI
         </Typography>
         <Box sx={{ mt: 4 }}>
           <Button
@@ -76,10 +76,10 @@ const HomePage = () => {
     <MainLayout>
       <Box sx={{ flexGrow: 1, pt: 2 }}>
         <Typography variant="h4" component="h1" gutterBottom>
-          Bienvenido a GPT Wrapper
+          Bienvenido a Assistant Wrapper
         </Typography>
         <Typography variant="body1" paragraph>
-          Selecciona un GPT personalizado para comenzar a chatear o explora los disponibles.
+          Selecciona un asistente para comenzar a chatear o explora los disponibles.
         </Typography>
 
         {/* Panel de administración - solo visible para administradores */}
@@ -116,7 +116,7 @@ const HomePage = () => {
                 onClick={() => navigate('/admin/gpts')}
                 startIcon={<AdminPanelSettingsIcon />}
               >
-                Gestionar GPTs
+                Gestionar Asistentes
               </Button>
 
               <Button
@@ -124,7 +124,7 @@ const HomePage = () => {
                 color="primary"
                 onClick={() => navigate('/admin/gpts/new')}
               >
-                Importar nuevo GPT
+                Importar nuevo Asistente
               </Button>
             </Box>
           </Paper>
@@ -132,11 +132,11 @@ const HomePage = () => {
 
         <Box sx={{ mt: 4 }}>
           <Typography variant="h5" gutterBottom>
-            GPTs disponibles
+            Asistentes disponibles
           </Typography>
 
           {loading ? (
-            <Typography>Cargando GPTs...</Typography>
+            <Typography>Cargando Asistentes...</Typography>
           ) : gpts && gpts.length > 0 ? (
             <Grid container spacing={3}>
               {gpts.map((gpt) => (
@@ -179,7 +179,7 @@ const HomePage = () => {
                   onClick={() => navigate('/admin/gpts/new')}
                   sx={{ mt: 2 }}
                 >
-                  Importar nuevo GPT
+                  Importar nuevo Asistente
                 </Button>
               )}
             </Box>

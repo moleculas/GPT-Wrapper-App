@@ -182,7 +182,7 @@ const ProfilePage = () => {
                     onClick={() => navigate('/admin/gpts')}
                     fullWidth
                   >
-                    Gestionar GPTs
+                    Gestionar Asistentes
                   </Button>
                 </CardContent>
               </Card>

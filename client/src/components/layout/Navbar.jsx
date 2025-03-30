@@ -88,7 +88,7 @@ const Navbar = ({ sidebarWidth }) => {
           }}
           onClick={() => navigate('/')}
         >
-          GPT Wrapper
+          Assistant Wrapper
         </Typography>
 
         {/* Iconos de navegación rápida - visible solo en desktop */}

@@ -12,11 +12,12 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Divider
+  Divider,
+  Autocomplete
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { fetchGPT, createGPT, updateGPT } from '../../redux/slices/gptSlice';
+import { fetchGPT, createGPT, updateGPT, fetchAvailableGPTs } from '../../redux/slices/gptSlice';
 import { addAlert } from '../../redux/slices/uiSlice';
 import MainLayout from '../../components/layout/MainLayout';
 
@@ -24,7 +25,7 @@ const GPTFormPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { currentGPT, loading, error } = useSelector(state => state.gpts);
+  const { currentGPT, loading, error, availableGPTs } = useSelector(state => state.gpts);
   const { user } = useSelector(state => state.auth);
 
   const isEditMode = !!id;
@@ -36,6 +37,15 @@ const GPTFormPage = () => {
     model: 'gpt-4',
     imageUrl: ''
   });
+
+  const [selectedGPT, setSelectedGPT] = useState(null);
+
+  useEffect(() => {
+    // Mostrar en consola cuando se cargan los GPTs disponibles
+    if (availableGPTs) {
+      console.log(`GPTs disponibles: ${availableGPTs.length}`, availableGPTs);
+    }
+  }, [availableGPTs]);
 
   useEffect(() => {
     if (user && user.role !== 'admin') {
@@ -49,6 +59,9 @@ const GPTFormPage = () => {
 
     if (isEditMode) {
       dispatch(fetchGPT(id));
+    } else {
+      // Cargar GPTs disponibles desde OpenAI si estamos en modo creación
+      dispatch(fetchAvailableGPTs());
     }
   }, [dispatch, navigate, isEditMode, id, user]);
 
@@ -63,6 +76,19 @@ const GPTFormPage = () => {
       });
     }
   }, [isEditMode, currentGPT]);
+
+  // Actualizar formulario cuando se selecciona un GPT del autocomplete
+  useEffect(() => {
+    if (selectedGPT) {
+      setFormData(prev => ({
+        ...prev,
+        name: selectedGPT.name || '',
+        description: selectedGPT.description || '',
+        openaiId: selectedGPT.id || '',
+        model: selectedGPT.model || 'gpt-4'
+      }));
+    }
+  }, [selectedGPT]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -135,7 +161,7 @@ const GPTFormPage = () => {
     <MainLayout>
       <Box sx={{ flexGrow: 1, p: 3 }}>
         <Typography variant="h4" component="h1" gutterBottom>
-          {isEditMode ? 'Editar GPT' : 'Importar GPT desde OpenAI'}
+          {isEditMode ? 'Editar Asistente' : 'Importar Asistente desde OpenAI'}
         </Typography>
 
         {error && (
@@ -147,8 +173,8 @@ const GPTFormPage = () => {
         <Paper sx={{ p: 3, mb: 3, bgcolor: '#f9f9f9', borderRadius: 1 }}>
           <Typography variant="body2" color="text.secondary">
             {isEditMode
-              ? 'Actualiza la información y configuración de este GPT en la aplicación.'
-              : 'Importa un GPT personalizado desde tu cuenta de OpenAI. El GPT debe existir previamente en tu cuenta empresarial de OpenAI.'}
+              ? 'Actualiza la información y configuración de este Asistente en la aplicación.'
+              : 'Importa un Asistente personalizado desde tu cuenta de OpenAI. El Asistente debe existir previamente en tu cuenta empresarial de OpenAI.'}
           </Typography>
         </Paper>
 
@@ -162,30 +188,68 @@ const GPTFormPage = () => {
                 <Divider sx={{ mb: 2 }} />
               </Box>
 
-              {/* Primera fila: Nombre y ID de OpenAI */}
+              {/* Primera fila: Nombre y selector de GPT de OpenAI */}
               <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
                 <TextField
                   fullWidth
                   required
-                  label="Nombre del GPT"
+                  label="Nombre del Asistente"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
                   variant="outlined"
                   helperText="Nombre con el que aparecerá en la aplicación"
+                  disabled={!isEditMode && selectedGPT !== null}
                 />
 
-                <TextField
-                  fullWidth
-                  required
-                  label="ID de OpenAI"
-                  name="openaiId"
-                  value={formData.openaiId}
-                  onChange={handleChange}
-                  variant="outlined"
-                  helperText="ID único del GPT en OpenAI"
-                  disabled={isEditMode}
-                />
+                {isEditMode ? (
+                  <TextField
+                    fullWidth
+                    required
+                    label="ID de OpenAI"
+                    name="openaiId"
+                    value={formData.openaiId}
+                    variant="outlined"
+                    helperText="ID único del Asistente en OpenAI"
+                    disabled={true}
+                  />
+                ) : (
+                  <Autocomplete
+                    fullWidth
+                    id="gpt-selector"
+                    options={availableGPTs || []}
+                    loading={loading}
+                    value={selectedGPT}
+                    onChange={(event, newValue) => {
+                      setSelectedGPT(newValue);
+                    }}
+                    getOptionLabel={(option) => `${option.name} (${option.id})`}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Seleccionar Asistente de OpenAI"
+                        required
+                        helperText={
+                          loading
+                            ? "Cargando Asistentes disponibles..."
+                            : availableGPTs && availableGPTs.length === 0
+                              ? "No se encontraron Asistentes disponibles"
+                              : "Selecciona un Asistente de tu cuenta de OpenAI"
+                        }
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <>
+                              {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                              {params.InputProps.endAdornment}
+                            </>
+                          ),
+                        }}
+                      />
+                    )}
+                    noOptionsText="No hay Asistentes disponibles en tu cuenta de OpenAI"
+                  />
+                )}
               </Stack>
 
               <TextField
@@ -198,7 +262,8 @@ const GPTFormPage = () => {
                 variant="outlined"
                 multiline
                 rows={2}
-                helperText="Breve descripción de lo que hace este GPT"
+                helperText="Breve descripción de lo que hace este Asistente"
+                disabled={!isEditMode && selectedGPT !== null}
               />
 
               <Box>
@@ -219,6 +284,7 @@ const GPTFormPage = () => {
                     value={formData.model}
                     onChange={handleChange}
                     label="Modelo base"
+                    disabled={!isEditMode && selectedGPT !== null}
                   >
                     <MenuItem value="gpt-4">GPT-4</MenuItem>
                     <MenuItem value="gpt-4-turbo">GPT-4 Turbo</MenuItem>
@@ -250,12 +316,12 @@ const GPTFormPage = () => {
                   type="submit"
                   variant="contained"
                   color="primary"
-                  disabled={loading}
+                  disabled={loading || (!isEditMode && !selectedGPT)}
                 >
                   {loading ? (
                     <CircularProgress size={24} />
                   ) : (
-                    isEditMode ? 'Actualizar GPT' : 'Importar GPT'
+                    isEditMode ? 'Actualizar Asistente' : 'Importar Asistente'
                   )}
                 </Button>
               </Box>

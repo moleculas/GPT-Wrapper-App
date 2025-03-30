@@ -197,7 +197,7 @@ const GPTPermissionsPage = () => {
                         {currentGPT.name}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                        Configura qué usuarios podrán acceder a este GPT. Puedes hacerlo disponible para todos los usuarios o seleccionar usuarios específicos.
+                        Configura qué usuarios podrán acceder a este Asistente. Puedes hacerlo disponible para todos los usuarios o seleccionar usuarios específicos.
                     </Typography>
                 </Paper>
 
@@ -223,8 +223,8 @@ const GPTPermissionsPage = () => {
                             />
                             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                                 {isPublic
-                                    ? "Todos los usuarios podrán ver y usar este GPT"
-                                    : "Solo los usuarios seleccionados podrán acceder a este GPT"}
+                                    ? "Todos los usuarios podrán ver y usar este Asistente"
+                                    : "Solo los usuarios seleccionados podrán acceder a este Asistente"}
                             </Typography>
                         </Box>
 
@@ -302,7 +302,7 @@ const GPTPermissionsPage = () => {
                                     </List>
                                 ) : (
                                     <Alert severity="info" sx={{ mt: 2 }}>
-                                        No hay usuarios seleccionados. Nadie podrá acceder a este GPT si no es público.
+                                        No hay usuarios seleccionados. Nadie podrá acceder a este Asistente si no es público.
                                     </Alert>
                                 )}
                             </Box>

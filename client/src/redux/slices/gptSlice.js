@@ -39,6 +39,20 @@ export const fetchAllGPTs = createAsyncThunk(
   }
 );
 
+export const fetchAvailableGPTs = createAsyncThunk(
+  'gpts/fetchAvailable',
+  async (_, { getState, rejectWithValue }) => {
+    try {
+      const token = getState().auth.token;
+      const response = await axios.get(`${API_URL}/available`, getConfig(token));
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener GPTs disponibles:', error);
+      return rejectWithValue(error.response?.data || { error: 'Error al cargar GPTs disponibles' });
+    }
+  }
+);
+
 export const fetchGPT = createAsyncThunk(
   'gpts/fetchOne',
   async (id, { getState, rejectWithValue }) => {
@@ -111,6 +125,7 @@ export const chatWithGPT = createAsyncThunk(
 
 const initialState = {
   gpts: [],
+  availableGPTs: [], 
   currentGPT: null,
   chat: {
     response: null,
@@ -161,6 +176,20 @@ const gptSlice = createSlice({
       .addCase(fetchAllGPTs.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload?.error || 'Error al cargar todos los GPTs';
+      })
+      
+      // Fetch available GPTs from OpenAI
+      .addCase(fetchAvailableGPTs.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchAvailableGPTs.fulfilled, (state, action) => {
+        state.loading = false;
+        state.availableGPTs = action.payload.data;
+      })
+      .addCase(fetchAvailableGPTs.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload?.error || 'Error al cargar GPTs disponibles de OpenAI';
       })
       
       // Fetch single GPT

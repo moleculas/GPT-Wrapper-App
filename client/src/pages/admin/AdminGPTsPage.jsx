@@ -83,7 +83,7 @@ const AdminGPTsPage = () => {
           mb: 3
         }}>
           <Typography variant="h4" component="h1">
-            Administrar GPTs
+            Administrar Asistentes
           </Typography>
 
           <Button
@@ -92,17 +92,17 @@ const AdminGPTsPage = () => {
             startIcon={<AddIcon />}
             onClick={() => navigate('/admin/gpts/new')}
           >
-            Importar GPT
+            Importar Asistente
           </Button>
         </Box>
 
         <Paper sx={{ p: 3, mb: 4, bgcolor: '#f9f9f9', borderRadius: 1 }}>
           <Typography variant="h6" gutterBottom>
-            Gestión de GPTs personalizados
+            Gestión de Asistentes personalizados
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Desde aquí puedes importar GPTs personalizados desde tu cuenta de OpenAI, gestionar sus ajustes de visibilidad
-            y controlar qué usuarios tienen acceso a cada GPT. Los GPTs importados deben existir previamente en tu cuenta empresarial de OpenAI.
+            Desde aquí puedes importar Asistentes desde tu cuenta de OpenAI, gestionar sus ajustes de visibilidad
+            y controlar qué usuarios tienen acceso a cada Asistente. Los Asistentes importados deben existir previamente en tu cuenta empresarial de OpenAI.
           </Typography>
         </Paper>
 
