@@ -14,6 +14,7 @@ const {
    deleteGPTThreads
 } = require('../../controllers/gptController');
 const { protect, authorize } = require('../../middleware/auth');
+const { processBase64Files } = require('../../middleware/upload');
 
 router.use(protect);
 
@@ -36,7 +37,7 @@ router.post('/:id/threads', createThread);
 
 router.get('/threads/:threadId/messages', getThreadMessages);
 
-router.post('/:id/threads/:threadId/messages', sendMessageToAssistant);
+router.post('/:id/threads/:threadId/messages', processBase64Files, sendMessageToAssistant);
 
 router.delete('/:id/threads', deleteGPTThreads);
 

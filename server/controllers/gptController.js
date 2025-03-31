@@ -3,8 +3,9 @@ const Thread = require('../models/Thread');
 const User = require('../models/User');
 const axios = require('axios');
 const { OpenAI } = require('openai');
+const path = require('path');
+const fs = require('fs');
 
-// Inicializar cliente de OpenAI
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
@@ -228,8 +229,6 @@ exports.chatWithGPT = async (req, res) => {
       });
     }
 
-    // Aquí iría la integración con la API de OpenAI
-    // Este es un ejemplo simplificado
     try {
       const openaiResponse = await axios.post(
         'https://api.openai.com/v1/chat/completions',
@@ -312,8 +311,6 @@ exports.getAvailableGPTs = async (req, res) => {
   }
 };
 
-// Nuevos métodos para trabajar con threads de la API de Asistentes
-
 // @desc    Crear un nuevo thread
 // @route   POST /api/gpts/threads
 // @access  Private
@@ -337,7 +334,7 @@ exports.createThread = async (req, res) => {
         error: 'GPT no encontrado'
       });
     }
-    
+
     if (
       req.user.role !== 'admin' &&
       !gpt.isPublic &&
@@ -349,14 +346,14 @@ exports.createThread = async (req, res) => {
         error: 'No tienes permiso para usar este GPT'
       });
     }
-    
+
     let threadDoc = await Thread.findOne({
       userId: req.user.id,
       gptId: gptId
     });
 
     if (threadDoc) {
-            threadDoc.lastActivityAt = Date.now();
+      threadDoc.lastActivityAt = Date.now();
       await threadDoc.save();
 
       return res.status(200).json({
@@ -366,11 +363,11 @@ exports.createThread = async (req, res) => {
         }
       });
     }
-    
+
     const user = await User.findById(req.user.id);
-    
+
     const openaiThread = await openai.beta.threads.create();
-    
+
     await openai.beta.threads.messages.create(openaiThread.id, {
       role: "user",
       content: `Utiliza el nombre del usuario "${user.name}" para saludarlo en el primer mensaje de cada conversación (por ejemplo: "Hola, ${user.name}"). No es necesario que lo menciones en cada mensaje posterior, solo úsalo de manera natural cuando la conversación lo requiera. Esta es una instrucción del sistema.`, metadata: { system_instruction: "true" }
@@ -523,22 +520,122 @@ exports.sendMessageToAssistant = async (req, res) => {
       });
     }
 
+    // Variable para almacenar contenido extraído de archivos
+    let extractedContent = '';
+    
+    // Procesar archivos si existen
+    if (files && files.length > 0) {
+      console.log('Procesando archivos:', files.length);
+      
+      for (const file of files) {
+        let tempFilePath;
+        try {
+          console.log('Procesando archivo:', file.name, file.type, file.size);
+          
+          // Verificar que la data existe
+          if (!file.data) {
+            console.error('Error: file.data está vacío o no es válido');
+            continue;
+          }
+          
+          // Convertir data base64 a buffer
+          const fileData = Buffer.from(file.data, 'base64');
+          
+          if (fileData.length === 0) {
+            console.error('Error: Buffer vacío después de convertir base64');
+            continue;
+          }
+          
+          // Si es un archivo de texto, extraer su contenido
+          if (file.type === 'text/plain') {
+            const textContent = fileData.toString('utf-8');
+            extractedContent += `\n\n### Contenido del archivo: ${file.name}\n\n${textContent}`;
+            console.log(`Contenido extraído del archivo ${file.name}`);
+          } else {
+            // Para otros tipos de archivos, intentamos subirlos a OpenAI
+            // Crear directorio de uploads si no existe
+            const uploadDir = path.join(__dirname, '../uploads');
+            if (!fs.existsSync(uploadDir)) {
+              fs.mkdirSync(uploadDir, { recursive: true });
+            }
+            
+            // Crear archivo temporal en disco
+            tempFilePath = path.join(uploadDir, `${Date.now()}-${file.name}`);
+            fs.writeFileSync(tempFilePath, fileData);
+            
+            console.log('Archivo temporal creado:', tempFilePath);
+            
+            // Verificar que el archivo existe
+            if (!fs.existsSync(tempFilePath)) {
+              console.error('Error: Archivo temporal no fue creado correctamente');
+              continue;
+            }
+            
+            extractedContent += `\n\n### Archivo adjunto: ${file.name} (no se puede mostrar contenido directamente)`;
+            
+            // Eliminar archivo temporal cuando hemos terminado
+            fs.unlinkSync(tempFilePath);
+          }
+        } catch (fileError) {
+          console.error('Error procesando archivo:', fileError);
+          
+          // Eliminar archivo temporal si existe
+          if (tempFilePath && fs.existsSync(tempFilePath)) {
+            try {
+              fs.unlinkSync(tempFilePath);
+            } catch (unlinkError) {
+              console.error('Error al eliminar archivo temporal:', unlinkError);
+            }
+          }
+          
+          // Continuar con el siguiente archivo
+          continue;
+        }
+      }
+    }
+    
+    // Construir mensaje completo con el contenido extraído
+    let fullMessage = message || "Por favor analiza el contenido proporcionado";
+    
+    if (extractedContent) {
+      fullMessage += `\n\n${extractedContent}`;
+    }
+    
+    console.log('Creando mensaje con contenido de archivos extraído');
+    
+    // Crear mensaje con el contenido combinado
     await openai.beta.threads.messages.create(threadId, {
       role: "user",
-      content: message
+      content: fullMessage
     });
-
+    
+    console.log('Mensaje creado, ejecutando asistente');
+    
+    // Ejecutar el asistente
     const run = await openai.beta.threads.runs.create(threadId, {
       assistant_id: gpt.openaiId
     });
 
+    console.log('Run creado:', run.id, 'estado inicial:', run.status);
+    
     let runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
-
-    while (runStatus.status === 'queued' || runStatus.status === 'in_progress') {
+    let attempts = 0;
+    const maxAttempts = 60; // 1 minuto máximo (60 intentos de 1 segundo)
+    
+    console.log('Esperando finalización del run...');
+    
+    while ((runStatus.status === 'queued' || runStatus.status === 'in_progress') && attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, 1000));
       runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
+      attempts++;
+      
+      if (attempts % 5 === 0) {
+        console.log(`Esperando... Estado: ${runStatus.status}, intentos: ${attempts}/${maxAttempts}`);
+      }
     }
 
+    console.log('Run completado con estado:', runStatus.status);
+    
     if (runStatus.status === 'completed') {
       const messages = await openai.beta.threads.messages.list(threadId);
 
@@ -547,6 +644,8 @@ exports.sendMessageToAssistant = async (req, res) => {
         data: messages.data.reverse()
       });
     } else {
+      console.error('Run no completado:', runStatus);
+      
       res.status(500).json({
         success: false,
         error: `La ejecución terminó con estado: ${runStatus.status}`,

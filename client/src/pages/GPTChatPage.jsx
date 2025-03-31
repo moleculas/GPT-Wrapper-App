@@ -7,9 +7,21 @@ import {
   Avatar,
   CircularProgress,
   IconButton,
-  Button
+  Button,
+  Chip,
+  Stack,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Tooltip
 } from '@mui/material';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
+import DeleteIcon from '@mui/icons-material/Delete';
+import DescriptionIcon from '@mui/icons-material/Description';
+import ImageIcon from '@mui/icons-material/Image';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import ResetIcon from '@mui/icons-material/RestartAlt';
 import { useParams } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
@@ -35,9 +47,19 @@ const GPTChatPage = () => {
   const [initializing, setInitializing] = useState(true);
   const [messageLimit, setMessageLimit] = useState(10);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
 
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  const MAX_FILE_SIZE = 20 * 1024 * 1024; 
+  const ALLOWED_FILE_TYPES = [
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 
+    'application/pdf', 'text/plain', 'text/csv',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // docx
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation' // pptx
+  ];
 
   useEffect(() => {
     if (id) {
@@ -69,16 +91,26 @@ const GPTChatPage = () => {
     if (e && e.preventDefault) {
       e.preventDefault();
     }
-
+  
     if (!message.trim() && files.length === 0) return;
-
+  
+    // Preparar los archivos para enviar
+    const processedFiles = files.map(file => ({
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      data: file.data // La data en base64
+    }));
+  
+    console.log('Enviando mensaje con archivos:', processedFiles.length);
+    
     dispatch(sendMessageToAssistant({
       gptId: id,
       threadId,
       message,
-      files
+      files: processedFiles
     }));
-
+  
     setMessage('');
     setFiles([]);
   };
@@ -90,9 +122,88 @@ const GPTChatPage = () => {
     }
   };
 
-  const handleFileChange = (e) => {
-    const newFiles = Array.from(e.target.files);
+  const handleFileChange = async (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    await processFiles(selectedFiles);
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const processFiles = async (selectedFiles) => {
+    const newFiles = [];
+    
+    for (const file of selectedFiles) {
+      if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+        alert(`Tipo de archivo no permitido: ${file.type}`);
+        continue;
+      }
+      
+      if (file.size > MAX_FILE_SIZE) {
+        alert(`El archivo ${file.name} excede el tamaño máximo permitido (20MB)`);
+        continue;
+      }
+      
+      const base64Data = await readFileAsBase64(file);
+      
+      newFiles.push({
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        preview: file.type.startsWith('image/') ? base64Data : null,
+        data: base64Data.split(',')[1] 
+      });
+    }
+    
     setFiles(prev => [...prev, ...newFiles]);
+  };
+
+  const readFileAsBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = error => reject(error);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleRemoveFile = (index) => {
+    setFiles(files.filter((_, i) => i !== index));
+  };
+
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      await processFiles(Array.from(e.dataTransfer.files));
+    }
+  };
+
+  const getFileIcon = (fileType) => {
+    if (fileType.startsWith('image/')) return <ImageIcon />;
+    if (fileType === 'application/pdf') return <PictureAsPdfIcon />;
+    if (fileType.includes('document')) return <DescriptionIcon />;
+    return <InsertDriveFileIcon />;
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return bytes + ' B';
+    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    else return (bytes / 1048576).toFixed(1) + ' MB';
   };
 
   const handleResetConfirm = () => {
@@ -120,6 +231,13 @@ const GPTChatPage = () => {
   const renderMessage = (msg) => {
     const isUser = msg.role === 'user';
     const messageContent = msg.content[0]?.text?.value || "";
+    
+    const fileAttachments = msg.content
+      .filter(contentItem => contentItem.type === 'image_file' || contentItem.type === 'file_attachment')
+      .map(file => ({
+        id: file.file_id,
+        type: file.type
+      }));
 
     return (
       <Box
@@ -146,6 +264,27 @@ const GPTChatPage = () => {
             borderRadius: '8px'
           }}
         >
+          {/* Mostrar archivos adjuntos si hay */}
+          {fileAttachments.length > 0 && (
+            <Box sx={{ mb: 1 }}>
+              <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 0.5 }}>
+                Archivos adjuntos:
+              </Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap">
+                {fileAttachments.map((file, index) => (
+                  <Chip 
+                    key={index}
+                    icon={<AttachFileIcon />}
+                    label={`Archivo ${index + 1}`}
+                    variant="outlined"
+                    size="small"
+                    sx={{ mb: 0.5 }}
+                  />
+                ))}
+              </Stack>
+            </Box>
+          )}
+
           {isUser ? (
             <Typography variant="body1" style={{ whiteSpace: 'pre-wrap' }}>
               {messageContent}
@@ -202,7 +341,7 @@ const GPTChatPage = () => {
         display: 'flex',
         flexDirection: 'column',
         height: '100vh',
-        overflow: 'hidden' // Evitar scroll en el contenedor principal
+        overflow: 'hidden'
       }}>
         {currentGPT ? (
           <>
@@ -231,8 +370,7 @@ const GPTChatPage = () => {
                   onClick={handleResetButtonClick}
                   disabled={chatLoading}
                   startIcon={<ResetIcon />}
-                  sx={{
-                    borderRadius: '8px',
+                  sx={{                  
                     fontSize: '0.75rem'
                   }}
                 >
@@ -322,31 +460,65 @@ const GPTChatPage = () => {
               <div ref={chatEndRef} />
             </Box>
 
-            {/* Área de entrada de mensajes (sin línea divisoria) */}
+            {/* Área de entrada de mensajes */}
             <Box sx={{
               p: 2,
-              flexShrink: 0 // Evitar que el área de entrada se encoja
+              flexShrink: 0
             }}>
+              {/* Área de archivos seleccionados */}
               {files.length > 0 && (
-                <Box sx={{ mb: 1 }}>
-                  <Typography variant="caption">
-                    Archivos: {files.map(f => f.name).join(', ')}
-                    <IconButton
-                      size="small"
-                      color="secondary"
-                      onClick={() => setFiles([])}
-                      sx={{ ml: 1 }}
-                    >
-                      ×
-                    </IconButton>
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 1,
+                    mb: 2,
+                    borderRadius: '8px',
+                    maxHeight: '150px',
+                    overflow: 'auto'
+                  }}
+                >
+                  <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 1 }}>
+                    Archivos seleccionados:
                   </Typography>
-                </Box>
+                  <List dense disablePadding>
+                    {files.map((file, index) => (
+                      <ListItem
+                        key={index}
+                        secondaryAction={
+                          <IconButton edge="end" size="small" onClick={() => handleRemoveFile(index)}>
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        }
+                        sx={{ py: 0.5 }}
+                      >
+                        <ListItemIcon sx={{ minWidth: 36 }}>
+                          {getFileIcon(file.type)}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={file.name}
+                          secondary={formatFileSize(file.size)}
+                          primaryTypographyProps={{ variant: 'caption', noWrap: true }}
+                          secondaryTypographyProps={{ variant: 'caption' }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Paper>
               )}
 
-              <form onSubmit={handleSendMessage} style={{ display: 'flex' }}>
+              {/* Formulario de mensaje con soporte para drag & drop */}
+              <Box
+                component="form"
+                onSubmit={handleSendMessage}
+                onDragEnter={handleDrag}
+                sx={{
+                  position: 'relative',
+                  display: 'flex'
+                }}
+              >
                 <TextField
                   fullWidth
-                  placeholder="Escribe un mensaje..."
+                  placeholder="Escribe un mensaje o arrastra archivos aquí..."
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyDown={handleKeyDown}
@@ -357,18 +529,24 @@ const GPTChatPage = () => {
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '8px',
                       backgroundColor: theme => theme.palette.background.paper,
+                      ...(dragActive && {
+                        borderColor: 'primary.main',
+                        boxShadow: '0 0 0 2px rgba(25, 118, 210, 0.2)'
+                      })
                     }
                   }}
                   disabled={chatLoading}
                   InputProps={{
                     endAdornment: (
-                      <IconButton
-                        onClick={() => fileInputRef.current.click()}
-                        disabled={chatLoading}
-                        edge="end"
-                      >
-                        <AttachFileIcon />
-                      </IconButton>
+                      <Tooltip title="Adjuntar archivos">
+                        <IconButton
+                          onClick={() => fileInputRef.current.click()}
+                          disabled={chatLoading}
+                          edge="end"
+                        >
+                          <AttachFileIcon />
+                        </IconButton>
+                      </Tooltip>
                     )
                   }}
                 />
@@ -378,8 +556,42 @@ const GPTChatPage = () => {
                   ref={fileInputRef}
                   style={{ display: 'none' }}
                   onChange={handleFileChange}
+                  accept={ALLOWED_FILE_TYPES.join(',')}
                 />
-              </form>
+
+                {/* Overlay para drop zone */}
+                {dragActive && (
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      width: '100%',
+                      height: '100%',
+                      borderRadius: '8px',
+                      top: 0,
+                      right: 0,
+                      bottom: 0,
+                      left: 0,
+                      backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      zIndex: 1,
+                      border: '2px dashed',
+                      borderColor: 'primary.main'
+                    }}
+                    onDragEnter={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDragOver={handleDrag}
+                    onDrop={handleDrop}
+                  >
+                    <Typography>Suelta los archivos aquí</Typography>
+                  </Box>
+                )}
+              </Box>
+              
+              <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mt: 1, fontSize: '0.7rem' }}>
+                Formatos permitidos: imágenes, PDF, documentos, hojas de cálculo. Máximo 20MB por archivo.
+              </Typography>
             </Box>
           </>
         ) : (
@@ -388,6 +600,7 @@ const GPTChatPage = () => {
           </Box>
         )}
       </Box>
+      
       {/* Diálogo de confirmación para resetear memoria */}
       <ConfirmDialog
         open={resetDialogOpen}
