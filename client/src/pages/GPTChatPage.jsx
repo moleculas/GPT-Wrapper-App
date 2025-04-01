@@ -14,7 +14,9 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
-  Tooltip
+  Tooltip,
+  Collapse,
+  Divider
 } from '@mui/material';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -23,6 +25,9 @@ import ImageIcon from '@mui/icons-material/Image';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import ResetIcon from '@mui/icons-material/RestartAlt';
+import FolderIcon from '@mui/icons-material/Folder';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { useParams } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import ReactMarkdown from 'react-markdown';
@@ -35,6 +40,7 @@ import {
 } from '../redux/slices/gptSlice';
 import MainLayout from '../components/layout/MainLayout';
 import ConfirmDialog from '../components/shared/ConfirmDialog';
+import AssistantFilesManager from '../components/gpt/AssistantFilesManager';
 
 const GPTChatPage = () => {
   const { id } = useParams();
@@ -48,6 +54,7 @@ const GPTChatPage = () => {
   const [messageLimit, setMessageLimit] = useState(10);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [filesManagerOpen, setFilesManagerOpen] = useState(false);
 
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -361,23 +368,43 @@ const GPTChatPage = () => {
                 </Typography>
               </Box>
 
-              {/* Botón de reseteo de memoria - solo visible si hay mensajes */}
-              {visibleMessages && visibleMessages.length > 0 && (
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                {/* Botón para gestionar archivos permanentes */}
                 <Button
                   variant="outlined"
-                  color="primary"
+                  color="secondary"
                   size="small"
-                  onClick={handleResetButtonClick}
-                  disabled={chatLoading}
-                  startIcon={<ResetIcon />}
-                  sx={{                  
-                    fontSize: '0.75rem'
-                  }}
+                  onClick={() => setFilesManagerOpen(!filesManagerOpen)}
+                  startIcon={<FolderIcon />}
+                  endIcon={filesManagerOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                  sx={{ fontSize: '0.75rem' }}
                 >
-                  Resetear memoria
+                  Archivos del asistente
                 </Button>
-              )}
+
+                {/* Botón de reseteo de memoria - solo visible si hay mensajes */}
+                {visibleMessages && visibleMessages.length > 0 && (
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    size="small"
+                    onClick={handleResetButtonClick}
+                    disabled={chatLoading}
+                    startIcon={<ResetIcon />}
+                    sx={{ fontSize: '0.75rem' }}
+                  >
+                    Resetear memoria
+                  </Button>
+                )}
+              </Box>
             </Box>
+
+            {/* Panel expandible para gestionar archivos del asistente */}
+            <Collapse in={filesManagerOpen} timeout="auto">
+              <Box sx={{ p: 2, borderBottom: '1px solid rgba(0, 0, 0, 0.12)' }}>
+                <AssistantFilesManager gptId={id} />
+              </Box>
+            </Collapse>
 
             {/* Área de conversación (único lugar con scroll) */}
             <Box sx={{
@@ -589,9 +616,25 @@ const GPTChatPage = () => {
                 )}
               </Box>
               
-              <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mt: 1, fontSize: '0.7rem' }}>
-                Formatos permitidos: imágenes, PDF, documentos, hojas de cálculo. Máximo 20MB por archivo.
-              </Typography>
+              <Box sx={{ mt: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
+                  Formatos permitidos: imágenes, PDF, documentos, hojas de cálculo. Máximo 20MB por archivo.
+                </Typography>
+                
+                {/* Añadimos un texto clickeable para abrir el panel de archivos permanentes */}
+                <Typography 
+                  variant="caption" 
+                  color="primary" 
+                  sx={{ 
+                    fontSize: '0.7rem', 
+                    cursor: 'pointer',
+                    textDecoration: 'underline'
+                  }}
+                  onClick={() => setFilesManagerOpen(!filesManagerOpen)}
+                >
+                  {filesManagerOpen ? 'Ocultar archivos del asistente' : 'Mostrar archivos del asistente'}
+                </Typography>
+              </Box>
             </Box>
           </>
         ) : (
