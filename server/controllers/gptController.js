@@ -492,13 +492,10 @@ exports.deleteGPTThreads = async (req, res) => {
   }
 };
 
-// @desc    Enviar mensaje a un asistente en un thread específico
-// @route   POST /api/gpts/:id/threads/:threadId/messages
-// @access  Private
 exports.sendMessageToAssistant = async (req, res) => {
   try {
     const { id, threadId } = req.params;
-    const { message, files } = req.body;
+    const { message } = req.body;
 
     const gpt = await GPT.findById(id);
     if (!gpt) {
@@ -508,6 +505,7 @@ exports.sendMessageToAssistant = async (req, res) => {
       });
     }
 
+    // Verificación de permisos
     if (
       req.user.role !== 'admin' &&
       !gpt.isPublic &&
@@ -519,94 +517,11 @@ exports.sendMessageToAssistant = async (req, res) => {
         error: 'No tienes permiso para usar este asistente'
       });
     }
-
-    // Variable para almacenar contenido extraído de archivos
-    let extractedContent = '';
     
-    // Procesar archivos si existen
-    if (files && files.length > 0) {
-      console.log('Procesando archivos:', files.length);
-      
-      for (const file of files) {
-        let tempFilePath;
-        try {
-          console.log('Procesando archivo:', file.name, file.type, file.size);
-          
-          // Verificar que la data existe
-          if (!file.data) {
-            console.error('Error: file.data está vacío o no es válido');
-            continue;
-          }
-          
-          // Convertir data base64 a buffer
-          const fileData = Buffer.from(file.data, 'base64');
-          
-          if (fileData.length === 0) {
-            console.error('Error: Buffer vacío después de convertir base64');
-            continue;
-          }
-          
-          // Si es un archivo de texto, extraer su contenido
-          if (file.type === 'text/plain') {
-            const textContent = fileData.toString('utf-8');
-            extractedContent += `\n\n### Contenido del archivo: ${file.name}\n\n${textContent}`;
-            console.log(`Contenido extraído del archivo ${file.name}`);
-          } else {
-            // Para otros tipos de archivos, intentamos subirlos a OpenAI
-            // Crear directorio de uploads si no existe
-            const uploadDir = path.join(__dirname, '../uploads');
-            if (!fs.existsSync(uploadDir)) {
-              fs.mkdirSync(uploadDir, { recursive: true });
-            }
-            
-            // Crear archivo temporal en disco
-            tempFilePath = path.join(uploadDir, `${Date.now()}-${file.name}`);
-            fs.writeFileSync(tempFilePath, fileData);
-            
-            console.log('Archivo temporal creado:', tempFilePath);
-            
-            // Verificar que el archivo existe
-            if (!fs.existsSync(tempFilePath)) {
-              console.error('Error: Archivo temporal no fue creado correctamente');
-              continue;
-            }
-            
-            extractedContent += `\n\n### Archivo adjunto: ${file.name} (no se puede mostrar contenido directamente)`;
-            
-            // Eliminar archivo temporal cuando hemos terminado
-            fs.unlinkSync(tempFilePath);
-          }
-        } catch (fileError) {
-          console.error('Error procesando archivo:', fileError);
-          
-          // Eliminar archivo temporal si existe
-          if (tempFilePath && fs.existsSync(tempFilePath)) {
-            try {
-              fs.unlinkSync(tempFilePath);
-            } catch (unlinkError) {
-              console.error('Error al eliminar archivo temporal:', unlinkError);
-            }
-          }
-          
-          // Continuar con el siguiente archivo
-          continue;
-        }
-      }
-    }
-    
-    // Construir mensaje completo con el contenido extraído
-    let fullMessage = message || "Por favor analiza el contenido proporcionado";
-    
-    if (extractedContent) {
-      fullMessage += `\n\n${extractedContent}`;
-    }
-    
-    console.log('Creando mensaje con contenido de archivos extraído');
-    
-    // Crear mensaje con el contenido combinado
+    // Crear el mensaje
     await openai.beta.threads.messages.create(threadId, {
       role: "user",
-      content: fullMessage
+      content: message || "Por favor analiza el contenido proporcionado"
     });
     
     console.log('Mensaje creado, ejecutando asistente');
@@ -657,6 +572,326 @@ exports.sendMessageToAssistant = async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Error al procesar el mensaje',
+      details: err.message
+    });
+  }
+};
+
+// @desc    Subir archivo a un asistente con prefijo user_
+// @route   POST /api/gpts/:id/files
+// @access  Private
+exports.uploadAssistantFile = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { files } = req.body;
+
+    // Verificar que el GPT existe
+    const gpt = await GPT.findById(id);
+    if (!gpt) {
+      return res.status(404).json({
+        success: false,
+        error: 'GPT no encontrado'
+      });
+    }
+
+    // Verificar permisos
+    if (
+      req.user.role !== 'admin' &&
+      !gpt.isPublic &&
+      gpt.createdBy.toString() !== req.user.id &&
+      !gpt.allowedUsers.includes(req.user.id)
+    ) {
+      return res.status(403).json({
+        success: false,
+        error: 'No tienes permiso para usar este GPT'
+      });
+    }
+
+    // Procesar archivos si existen
+    if (!files || files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No se han proporcionado archivos'
+      });
+    }
+
+    const uploadedFiles = [];
+    const errorFiles = [];
+
+    for (const file of files) {
+      let tempFilePath;
+      try {
+        console.log(`Procesando archivo: ${file.name}, ${file.type}, ${file.size}`);
+        
+        // Verificar que la data existe
+        if (!file.data) {
+          errorFiles.push({
+            name: file.name,
+            error: 'Datos de archivo no válidos'
+          });
+          continue;
+        }
+        
+        // Convertir data base64 a buffer
+        const fileData = Buffer.from(file.data, 'base64');
+        
+        if (fileData.length === 0) {
+          errorFiles.push({
+            name: file.name,
+            error: 'Buffer vacío después de convertir base64'
+          });
+          continue;
+        }
+
+        // Añadir prefijo user_ al nombre del archivo
+        const userFileName = `user_${file.name}`;
+        
+        // Crear directorio de uploads si no existe
+        const uploadDir = path.join(__dirname, '../uploads');
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        
+        // Crear archivo temporal en disco
+        tempFilePath = path.join(uploadDir, `${Date.now()}-${userFileName}`);
+        fs.writeFileSync(tempFilePath, fileData);
+        
+        console.log(`Archivo temporal creado: ${tempFilePath}`);
+        
+        // Subir archivo a OpenAI
+        const uploadedFile = await openai.files.create({
+          file: fs.createReadStream(tempFilePath),
+          purpose: 'assistants',
+          filename: userFileName // Usar el nombre con prefijo
+        });
+        
+        console.log(`Archivo subido a OpenAI con ID: ${uploadedFile.id}`);
+        
+        // Obtener el asistente para ver archivos actuales
+        const assistant = await openai.beta.assistants.retrieve(gpt.openaiId);
+        
+        // Añadir el nuevo archivo a la lista de archivos del asistente
+        let currentFileIds = assistant.file_ids || [];
+        currentFileIds.push(uploadedFile.id);
+        
+        // Asegurarse de que el asistente tiene la herramienta de búsqueda en archivos
+        let currentTools = assistant.tools || [];
+        if (!currentTools.some(tool => tool.type === 'file_search')) {
+          currentTools.push({ type: 'file_search' });
+        }
+        
+        // Actualizar el asistente con el nuevo archivo
+        await openai.beta.assistants.update(gpt.openaiId, {
+          file_ids: currentFileIds,
+          tools: currentTools
+        });
+        
+        console.log(`Asistente ${gpt.openaiId} actualizado con el nuevo archivo`);
+        
+        // Eliminar archivo temporal después de subirlo
+        fs.unlinkSync(tempFilePath);
+        
+        // Añadir archivo a la lista de éxitos
+        uploadedFiles.push({
+          name: userFileName,
+          originalName: file.name,
+          openai_id: uploadedFile.id,
+          type: file.type,
+          size: file.size
+        });
+      } catch (fileError) {
+        console.error(`Error procesando archivo ${file.name}:`, fileError);
+        
+        // Eliminar archivo temporal si existe
+        if (tempFilePath && fs.existsSync(tempFilePath)) {
+          try {
+            fs.unlinkSync(tempFilePath);
+          } catch (unlinkError) {
+            console.error('Error al eliminar archivo temporal:', unlinkError);
+          }
+        }
+        
+        // Añadir a errores
+        errorFiles.push({
+          name: file.name,
+          error: fileError.message
+        });
+      }
+    }
+
+    // Responder con estado de la operación
+    res.status(200).json({
+      success: true,
+      data: {
+        uploaded: uploadedFiles,
+        errors: errorFiles
+      }
+    });
+  } catch (err) {
+    console.error('Error al subir archivos al asistente:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Error al procesar los archivos',
+      details: err.message
+    });
+  }
+};
+
+// @desc    Obtener archivos de usuario de un asistente (con prefijo user_)
+// @route   GET /api/gpts/:id/files
+// @access  Private
+exports.getAssistantUserFiles = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Verificar que el GPT existe
+    const gpt = await GPT.findById(id);
+    if (!gpt) {
+      return res.status(404).json({
+        success: false,
+        error: 'GPT no encontrado'
+      });
+    }
+    
+    // Verificar permisos para ver el asistente
+    if (
+      req.user.role !== 'admin' &&
+      !gpt.isPublic &&
+      gpt.createdBy.toString() !== req.user.id &&
+      !gpt.allowedUsers.includes(req.user.id)
+    ) {
+      return res.status(403).json({
+        success: false,
+        error: 'No tienes permiso para ver este GPT'
+      });
+    }
+    
+    // Obtener los archivos del asistente desde OpenAI
+    const assistant = await openai.beta.assistants.retrieve(gpt.openaiId);
+    
+    // Si no hay file_ids, devolver lista vacía
+    if (!assistant.file_ids || assistant.file_ids.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: []
+      });
+    }
+    
+    // Obtener detalles de cada archivo
+    const userFiles = [];
+    
+    for (const fileId of assistant.file_ids) {
+      try {
+        const fileInfo = await openai.files.retrieve(fileId);
+        
+        // Solo incluir archivos con prefijo user_
+        if (fileInfo.filename && fileInfo.filename.startsWith('user_')) {
+          userFiles.push({
+            id: fileInfo.id,
+            filename: fileInfo.filename,
+            bytes: fileInfo.bytes,
+            created_at: fileInfo.created_at,
+            purpose: fileInfo.purpose
+          });
+        }
+      } catch (error) {
+        console.error(`Error al obtener detalles del archivo ${fileId}:`, error);
+      }
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: userFiles
+    });
+  } catch (err) {
+    console.error('Error al obtener archivos del asistente:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Error al obtener los archivos',
+      details: err.message
+    });
+  }
+};
+
+// @desc    Eliminar un archivo de usuario de un asistente
+// @route   DELETE /api/gpts/:id/files/:fileId
+// @access  Private
+exports.deleteAssistantFile = async (req, res) => {
+  try {
+    const { id, fileId } = req.params;
+    
+    // Verificar que el GPT existe
+    const gpt = await GPT.findById(id);
+    if (!gpt) {
+      return res.status(404).json({
+        success: false,
+        error: 'GPT no encontrado'
+      });
+    }
+    
+    // Verificar permisos
+    if (
+      req.user.role !== 'admin' &&
+      !gpt.isPublic &&
+      gpt.createdBy.toString() !== req.user.id &&
+      !gpt.allowedUsers.includes(req.user.id)
+    ) {
+      return res.status(403).json({
+        success: false,
+        error: 'No tienes permiso para modificar este GPT'
+      });
+    }
+    
+    // Obtener información del archivo
+    try {
+      const fileInfo = await openai.files.retrieve(fileId);
+      
+      // Verificar que es un archivo de usuario (con prefijo user_)
+      if (!fileInfo.filename || !fileInfo.filename.startsWith('user_')) {
+        return res.status(403).json({
+          success: false,
+          error: 'Solo puedes eliminar archivos de usuario (con prefijo user_)'
+        });
+      }
+      
+      // Obtener el asistente actual
+      const assistant = await openai.beta.assistants.retrieve(gpt.openaiId);
+      
+      // Verificar que el archivo está asociado al asistente
+      if (!assistant.file_ids || !assistant.file_ids.includes(fileId)) {
+        return res.status(404).json({
+          success: false,
+          error: 'Archivo no encontrado en este asistente'
+        });
+      }
+      
+      // Eliminar el archivo del asistente
+      const updatedFileIds = assistant.file_ids.filter(id => id !== fileId);
+      
+      await openai.beta.assistants.update(gpt.openaiId, {
+        file_ids: updatedFileIds
+      });
+      
+      // Intentar eliminar el archivo de OpenAI
+      await openai.files.del(fileId);
+      
+      res.status(200).json({
+        success: true,
+        message: `Archivo ${fileInfo.filename} eliminado correctamente`
+      });
+    } catch (fileError) {
+      console.error(`Error al procesar archivo ${fileId}:`, fileError);
+      res.status(500).json({
+        success: false,
+        error: 'Error al procesar el archivo',
+        details: fileError.message
+      });
+    }
+  } catch (err) {
+    console.error('Error al eliminar archivo del asistente:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Error al eliminar el archivo',
       details: err.message
     });
   }

@@ -1,20 +1,23 @@
 const express = require('express');
 const router = express.Router();
-const {
-   getGPTs,
-   getGPT,
-   createGPT,
-   updateGPT,
-   deleteGPT,
-   chatWithGPT,
-   getAvailableGPTs,
-   createThread,
-   getThreadMessages,
-   sendMessageToAssistant,
-   deleteGPTThreads
+const { 
+  getGPTs, 
+  getGPT, 
+  createGPT, 
+  updateGPT, 
+  deleteGPT, 
+  chatWithGPT, 
+  getAvailableGPTs, 
+  createThread,
+  getThreadMessages,
+  sendMessageToAssistant,
+  deleteGPTThreads,
+  // Nuevas funciones para archivos
+  uploadAssistantFile,
+  getAssistantUserFiles,
+  deleteAssistantFile
 } = require('../../controllers/gptController');
 const { protect, authorize } = require('../../middleware/auth');
-const { processBase64Files } = require('../../middleware/upload');
 
 router.use(protect);
 
@@ -31,14 +34,18 @@ router.route('/:id')
 
 router.post('/:id/chat', chatWithGPT);
 
-router.post('/threads', createThread); 
-
+// Rutas para threads
+router.post('/threads', createThread);
 router.post('/:id/threads', createThread);
-
 router.get('/threads/:threadId/messages', getThreadMessages);
-
-router.post('/:id/threads/:threadId/messages', processBase64Files, sendMessageToAssistant);
-
+router.post('/:id/threads/:threadId/messages', sendMessageToAssistant);
 router.delete('/:id/threads', deleteGPTThreads);
+
+// Nuevas rutas para gestión de archivos
+router.route('/:id/files')
+  .get(getAssistantUserFiles)
+  .post(uploadAssistantFile);
+
+router.delete('/:id/files/:fileId', deleteAssistantFile);
 
 module.exports = router;

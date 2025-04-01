@@ -195,6 +195,67 @@ export const resetGPTMemory = createAsyncThunk(
   }
 );
 
+// Nuevas acciones para la gestión de archivos
+export const uploadAssistantFiles = createAsyncThunk(
+  'gpts/uploadFiles',
+  async ({ gptId, files }, { getState, rejectWithValue }) => {
+    try {
+      const token = getState().auth.token;
+
+      const formattedFiles = files.map(file => ({
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        data: file.data
+      }));
+
+      const response = await axios.post(
+        `${API_URL}/${gptId}/files`,
+        { files: formattedFiles },
+        getConfig(token)
+      );
+
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || { error: 'Error al subir archivos' });
+    }
+  }
+);
+
+export const getAssistantUserFiles = createAsyncThunk(
+  'gpts/getFiles',
+  async (gptId, { getState, rejectWithValue }) => {
+    try {
+      const token = getState().auth.token;
+      const response = await axios.get(
+        `${API_URL}/${gptId}/files`,
+        getConfig(token)
+      );
+
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || { error: 'Error al obtener archivos' });
+    }
+  }
+);
+
+export const deleteAssistantFile = createAsyncThunk(
+  'gpts/deleteFile',
+  async ({ gptId, fileId }, { getState, rejectWithValue }) => {
+    try {
+      const token = getState().auth.token;
+      const response = await axios.delete(
+        `${API_URL}/${gptId}/files/${fileId}`,
+        getConfig(token)
+      );
+
+      return { ...response.data, fileId };
+    } catch (error) {
+      return rejectWithValue(error.response?.data || { error: 'Error al eliminar archivo' });
+    }
+  }
+);
+
 const initialState = {
   gpts: [],
   availableGPTs: [],
@@ -205,6 +266,12 @@ const initialState = {
     response: null,
     loading: false,
     error: null
+  },
+  files: {
+    userFiles: [],
+    loading: false,
+    error: null,
+    uploadSuccess: false
   },
   loading: false,
   error: null
@@ -223,6 +290,9 @@ const gptSlice = createSlice({
     },
     clearChatState: (state) => {
       state.chat = initialState.chat;
+    },
+    clearUploadSuccess: (state) => {
+      state.files.uploadSuccess = false;
     }
   },
   extraReducers: (builder) => {
@@ -404,9 +474,71 @@ const gptSlice = createSlice({
       .addCase(resetGPTMemory.rejected, (state, action) => {
         state.chat.loading = false;
         state.chat.error = action.payload?.error || 'Error al resetear la memoria';
+      })
+
+      .addCase(uploadAssistantFiles.pending, (state) => {
+        state.files.loading = true;
+        state.files.error = null;
+        state.files.uploadSuccess = false;
+      })
+      .addCase(uploadAssistantFiles.fulfilled, (state, action) => {
+        state.files.loading = false;
+        state.files.uploadSuccess = true;
+        
+        // Si hay archivos subidos con éxito, los añadimos a la lista
+        if (action.payload.data.uploaded && action.payload.data.uploaded.length > 0) {
+          // Si userFiles ya existe, mantener los archivos existentes y añadir los nuevos
+          const newFiles = action.payload.data.uploaded.map(file => ({
+            id: file.openai_id,
+            filename: file.name,
+            originalName: file.originalName,
+            type: file.type,
+            size: file.size
+          }));
+          
+          state.files.userFiles = [...(state.files.userFiles || []), ...newFiles];
+        }
+      })
+      .addCase(uploadAssistantFiles.rejected, (state, action) => {
+        state.files.loading = false;
+        state.files.error = action.payload?.error || 'Error al subir archivos';
+      })
+      
+      // Get Assistant User Files
+      .addCase(getAssistantUserFiles.pending, (state) => {
+        state.files.loading = true;
+        state.files.error = null;
+      })
+      .addCase(getAssistantUserFiles.fulfilled, (state, action) => {
+        state.files.loading = false;
+        state.files.userFiles = action.payload.data;
+      })
+      .addCase(getAssistantUserFiles.rejected, (state, action) => {
+        state.files.loading = false;
+        state.files.error = action.payload?.error || 'Error al obtener archivos';
+      })
+      
+      // Delete Assistant File
+      .addCase(deleteAssistantFile.pending, (state) => {
+        state.files.loading = true;
+        state.files.error = null;
+      })
+      .addCase(deleteAssistantFile.fulfilled, (state, action) => {
+        state.files.loading = false;
+        
+        // Eliminar el archivo de la lista
+        if (state.files.userFiles) {
+          state.files.userFiles = state.files.userFiles.filter(
+            file => file.id !== action.payload.fileId
+          );
+        }
+      })
+      .addCase(deleteAssistantFile.rejected, (state, action) => {
+        state.files.loading = false;
+        state.files.error = action.payload?.error || 'Error al eliminar archivo';
       });
   }
 });
 
-export const { clearGPTError, clearChatResponse, clearChatState } = gptSlice.actions;
+export const { clearGPTError, clearChatResponse, clearChatState, clearUploadSuccess } = gptSlice.actions;
 export default gptSlice.reducer;
