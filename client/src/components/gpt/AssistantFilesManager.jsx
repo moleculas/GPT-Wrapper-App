@@ -249,8 +249,15 @@ const AssistantFilesManager = ({ gptId }) => {
         </Box>
 
         <Typography variant="body2" color="textSecondary" gutterBottom>
-          Los archivos que subas estarán disponibles para el asistente en todas las conversaciones. Estos archivos se almacenan en OpenAI y solo tú puedes verlos y eliminarlos.
+          Los archivos que subas estarán disponibles para el asistente en todas las conversaciones. Solo se muestran archivos subidos desde esta aplicación, no los archivos base del asistente.
         </Typography>
+        
+        {/* Nuevo mensaje informativo sobre archivos base */}
+        <Alert severity="info" sx={{ mt: 1, mb: 2 }}>
+          <Typography variant="body2">
+            Los archivos de la base de conocimiento original del asistente no se muestran aquí y no pueden ser eliminados.
+          </Typography>
+        </Alert>
       </Box>
 
       {/* Mensajes de estado */}
@@ -322,7 +329,7 @@ const AssistantFilesManager = ({ gptId }) => {
         ) : !userFiles || userFiles.length === 0 ? (
           <Box sx={{ py: 2, textAlign: 'center' }}>
             <Typography color="textSecondary">
-              No hay archivos disponibles para este asistente
+              No hay archivos disponibles para este asistente subidos desde esta aplicación
             </Typography>
           </Box>
         ) : (
@@ -345,7 +352,7 @@ const AssistantFilesManager = ({ gptId }) => {
                   </ListItemIcon>
 
                   <ListItemText
-                    primary={file.filename.replace(/^user_/, '')} // Quitar prefijo user_ al mostrar
+                    primary={file.filename}
                     secondary={
                       <>
                         {formatFileSize(file.bytes)} • {formatDate(file.created_at)}
@@ -398,7 +405,7 @@ const AssistantFilesManager = ({ gptId }) => {
           </Typography>
 
           <Typography variant="body2" gutterBottom>
-            ¿Estás seguro de que quieres eliminar el archivo <strong>{confirmDelete.filename?.replace(/^user_/, '')}</strong>?
+            ¿Estás seguro de que quieres eliminar el archivo <strong>{confirmDelete.filename}</strong>?
           </Typography>
 
           <Typography variant="caption" color="error" gutterBottom display="block">

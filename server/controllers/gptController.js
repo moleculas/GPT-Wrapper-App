@@ -577,7 +577,6 @@ exports.sendMessageToAssistant = async (req, res) => {
   }
 };
 
-// server/controllers/gptController.js
 exports.uploadAssistantFile = async (req, res) => {
   try {
     const { id } = req.params;
@@ -694,71 +693,103 @@ exports.uploadAssistantFile = async (req, res) => {
       }
     }
 
-    // Si se subieron archivos con éxito, crear un vector store
+    // Si se subieron archivos con éxito, intentar añadirlos a un vector store
     if (fileIds.length > 0) {
       try {
-        // Crear un nombre seguro para el vector store
-        const safeGptName = gpt.name.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20);
-        const vectorStoreName = `${safeGptName}_${Date.now()}`;
-
-        console.log(`Creando vector store "${vectorStoreName}" con archivos: ${fileIds.join(', ')}`);
-
-        // Crear un vector store usando axios directamente con la API de OpenAI
-        const vectorStoreResponse = await axios.post(
-          'https://api.openai.com/v1/vector_stores',
-          {
-            name: vectorStoreName,
-            file_ids: fileIds
-          },
-          {
-            headers: {
-              'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-              'Content-Type': 'application/json',
-              'OpenAI-Beta': 'assistants=v2'
-            }
-          }
-        );
-
-        const vectorStore = vectorStoreResponse.data;
-        console.log(`Vector store creado con ID: ${vectorStore.id}`);
-
-        // Esperar un momento para asegurarnos de que el vector store está listo
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
         // Obtener el asistente actual
         const assistant = await openai.beta.assistants.retrieve(gpt.openaiId);
-
-        // Verificar si tiene la herramienta file_search y añadirla si no la tiene
-        let tools = assistant.tools || [];
-        if (!tools.some(tool => tool.type === 'file_search')) {
-          tools.push({ type: 'file_search' });
-        }
-
-        // Obtener los vector stores actuales y añadir el nuevo
-        let toolResources = assistant.tool_resources || {};
-        let fileSearch = toolResources.file_search || {};
-        let vectorStoreIds = fileSearch.vector_store_ids || [];
-
-        // Añadir el nuevo vector store
-        vectorStoreIds.push(vectorStore.id);
-
-        // Actualizar el asistente con el nuevo vector store
-        console.log(`Actualizando asistente ${gpt.openaiId} con vector stores: ${vectorStoreIds.join(', ')}`);
-
-        await openai.beta.assistants.update(gpt.openaiId, {
-          tools: tools,
-          tool_resources: {
-            file_search: {
-              vector_store_ids: vectorStoreIds
+        
+        // Verificar si el asistente ya tiene un vector store asociado
+        let existingVectorStoreId = null;
+        
+        if (assistant.tool_resources && 
+            assistant.tool_resources.file_search && 
+            assistant.tool_resources.file_search.vector_store_ids && 
+            assistant.tool_resources.file_search.vector_store_ids.length > 0) {
+          
+          // Obtenemos el ID del vector store asociado al asistente
+          existingVectorStoreId = assistant.tool_resources.file_search.vector_store_ids[0];
+          console.log(`El asistente ya tiene un vector store asociado: ${existingVectorStoreId}`);
+          
+          // Añadimos los archivos a este vector store existente
+          for (const fileId of fileIds) {
+            try {
+              await axios.post(
+                `https://api.openai.com/v1/vector_stores/${existingVectorStoreId}/files`,
+                {
+                  file_id: fileId
+                },
+                {
+                  headers: {
+                    'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                    'Content-Type': 'application/json',
+                    'OpenAI-Beta': 'assistants=v2'
+                  }
+                }
+              );
+              console.log(`Archivo ${fileId} añadido al vector store existente ${existingVectorStoreId}`);
+            } catch (error) {
+              console.error(`Error al añadir el archivo ${fileId} al vector store:`, error);
+              
+              // Si falla, intentamos con el método alternativo
+              throw new Error('No se pudo añadir el archivo al vector store existente');
             }
           }
-        });
+          
+          console.log(`Todos los archivos fueron añadidos al vector store existente con éxito`);
+        } else {
+          // No hay vector store asociado, creamos uno nuevo con el prefijo app_
+          const safeGptName = gpt.name.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20);
+          const vectorStoreName = `app_${safeGptName}_${Date.now()}`;
 
-        console.log(`Asistente actualizado correctamente con el vector store`);
+          console.log(`Creando nuevo vector store "${vectorStoreName}" con archivos: ${fileIds.join(', ')}`);
+          
+          // Crear un vector store usando axios directamente con la API de OpenAI
+          const vectorStoreResponse = await axios.post(
+            'https://api.openai.com/v1/vector_stores',
+            {
+              name: vectorStoreName,
+              file_ids: fileIds
+            },
+            {
+              headers: {
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                'Content-Type': 'application/json',
+                'OpenAI-Beta': 'assistants=v2'
+              }
+            }
+          );
+
+          const vectorStore = vectorStoreResponse.data;
+          console.log(`Vector store creado con ID: ${vectorStore.id}`);
+
+          // Esperar un momento para asegurarnos de que el vector store está listo
+          await new Promise(resolve => setTimeout(resolve, 2000));
+
+          // Asegurarnos de que el asistente tiene la herramienta file_search
+          let tools = assistant.tools || [];
+          if (!tools.some(tool => tool.type === 'file_search')) {
+            tools.push({ type: 'file_search' });
+          }
+
+          // Actualizar el asistente con el nuevo vector store
+          console.log(`Actualizando asistente ${gpt.openaiId} con vector store: ${vectorStore.id}`);
+
+          await openai.beta.assistants.update(gpt.openaiId, {
+            tools: tools,
+            tool_resources: {
+              file_search: {
+                vector_store_ids: [vectorStore.id]
+              }
+            }
+          });
+
+          console.log(`Asistente actualizado correctamente con el vector store`);
+        }
       } catch (vectorStoreError) {
-        console.error('Error al crear o asociar el vector store:', vectorStoreError);
+        console.error('Error al gestionar el vector store:', vectorStoreError);
 
-        // Si falla la creación del vector store, intentar añadir los archivos directamente al asistente
+        // Si falla la gestión de vector stores, intentar añadir los archivos directamente al asistente
         try {
           console.log('Intentando método alternativo: añadir archivos directamente al asistente');
 
@@ -835,211 +866,86 @@ exports.getAssistantUserFiles = async (req, res) => {
     console.log(`Recuperando asistente desde OpenAI con ID: ${gpt.openaiId}`);
     const assistant = await openai.beta.assistants.retrieve(gpt.openaiId);
     const allFiles = [];
-
-    // 1. Comprobar si el asistente tiene archivos directamente asociados
-    if (assistant.file_ids && assistant.file_ids.length > 0) {
-      console.log(`El asistente tiene ${assistant.file_ids.length} archivos directamente asociados`);
-      
-      for (const fileId of assistant.file_ids) {
-        try {
-          const fileInfo = await openai.files.retrieve(fileId);
-          allFiles.push({
-            id: fileInfo.id,
-            filename: fileInfo.filename,
-            bytes: fileInfo.bytes,
-            created_at: fileInfo.created_at,
-            purpose: fileInfo.purpose,
-            source: 'direct'
-          });
-        } catch (error) {
-          console.error(`Error al obtener detalles del archivo ${fileId}:`, error);
-        }
-      }
-    }
-
-    // 2. Comprobar si el asistente tiene vector stores
+    
+    // Obtener el vector store asociado al asistente
     if (assistant.tool_resources &&
         assistant.tool_resources.file_search &&
         assistant.tool_resources.file_search.vector_store_ids &&
         assistant.tool_resources.file_search.vector_store_ids.length > 0) {
       
-      console.log(`El asistente tiene ${assistant.tool_resources.file_search.vector_store_ids.length} vector stores`);
+      const vectorStoreId = assistant.tool_resources.file_search.vector_store_ids[0];
+      console.log(`El asistente tiene un vector store: ${vectorStoreId}`);
       
-      for (const vectorStoreId of assistant.tool_resources.file_search.vector_store_ids) {
-        try {
-          // Obtener los detalles del vector store usando Axios
-          const vectorStoreResponse = await axios.get(
-            `https://api.openai.com/v1/vector_stores/${vectorStoreId}`,
-            {
-              headers: {
-                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-                'Content-Type': 'application/json',
-                'OpenAI-Beta': 'assistants=v2'
-              }
-            }
-          );
-          
-          const vectorStore = vectorStoreResponse.data;
-          console.log(`Vector store ${vectorStoreId} recuperado: ${vectorStore.name}`);
-          
-          // Primero, obtener los archivos directamente del vector store
-          if (vectorStore.file_ids && vectorStore.file_ids.length > 0) {
-            console.log(`Vector store contiene ${vectorStore.file_ids.length} archivos: ${JSON.stringify(vectorStore.file_ids)}`);
-            
-            for (const fileId of vectorStore.file_ids) {
-              try {
-                const fileInfo = await openai.files.retrieve(fileId);
-                console.log(`Archivo encontrado en vector store: ${fileInfo.filename} (ID: ${fileInfo.id})`);
-                
-                // Verificar si este archivo ya está en la lista (para evitar duplicados)
-                if (!allFiles.some(f => f.id === fileInfo.id)) {
-                  allFiles.push({
-                    id: fileInfo.id,
-                    filename: fileInfo.filename,
-                    bytes: fileInfo.bytes,
-                    created_at: fileInfo.created_at,
-                    purpose: fileInfo.purpose,
-                    source: 'vector_store',
-                    vector_store_id: vectorStoreId
-                  });
-                }
-              } catch (fileError) {
-                console.error(`Error al obtener detalles del archivo ${fileId} del vector store:`, fileError);
-              }
-            }
-          } else {
-            console.log(`Vector store ${vectorStoreId} no tiene file_ids. Intentando obtener files del vector store...`);
-            
-            // Si el vector store no muestra file_ids, intentar obtener los archivos con una API adicional
-            try {
-              const vectorStoreFilesResponse = await axios.get(
-                `https://api.openai.com/v1/vector_stores/${vectorStoreId}/files`,
-                {
-                  headers: {
-                    'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-                    'Content-Type': 'application/json',
-                    'OpenAI-Beta': 'assistants=v2'
-                  }
-                }
-              );
-              
-              const vectorStoreFiles = vectorStoreFilesResponse.data;
-              console.log(`Vector store files encontrados: ${JSON.stringify(vectorStoreFiles)}`);
-              
-              if (vectorStoreFiles.data && vectorStoreFiles.data.length > 0) {
-                for (const vectorStoreFile of vectorStoreFiles.data) {
-                  // Corregir error: extraer el ID correctamente de each vectorStoreFile
-                  const fileId = vectorStoreFile.id;  // Este es el ID correcto (no vectorStoreFile.file_id)
-                  
-                  if (fileId) {
-                    try {
-                      console.log(`Obteniendo detalles del archivo con ID: ${fileId}`);
-                      const fileInfo = await openai.files.retrieve(fileId);
-                      console.log(`Archivo encontrado en listado de vector store: ${fileInfo.filename}`);
-                      
-                      if (!allFiles.some(f => f.id === fileInfo.id)) {
-                        allFiles.push({
-                          id: fileInfo.id,
-                          filename: fileInfo.filename,
-                          bytes: fileInfo.bytes,
-                          created_at: fileInfo.created_at,
-                          purpose: fileInfo.purpose,
-                          source: 'vector_store',
-                          vector_store_id: vectorStoreId
-                        });
-                      }
-                    } catch (fileError) {
-                      console.error(`Error al obtener detalles del archivo ${fileId}:`, fileError);
-                    }
-                  } else {
-                    console.warn(`Advertencia: Archivo sin ID válido en el vector store: ${JSON.stringify(vectorStoreFile)}`);
-                  }
-                }
-              }
-            } catch (vectorStoreFilesError) {
-              console.error(`Error al obtener los archivos del vector store ${vectorStoreId}:`, vectorStoreFilesError);
-              
-              // Si la API del vector store falla, intenta buscar los archivos directamente
-              console.log("Intentando buscar archivos relacionados con este vector store...");
-              try {
-                const allFilesResponse = await axios.get(
-                  'https://api.openai.com/v1/files?purpose=assistants',
-                  {
-                    headers: {
-                      'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-                      'Content-Type': 'application/json'
-                    }
-                  }
-                );
-                
-                const filesData = allFilesResponse.data.data || [];
-                // Asumimos que los archivos más recientes (últimos 5) podrían estar relacionados
-                const recentFiles = filesData.slice(0, 5);
-                
-                for (const file of recentFiles) {
-                  if (!allFiles.some(f => f.id === file.id)) {
-                    console.log(`Añadiendo archivo reciente como posible relación: ${file.filename}`);
-                    allFiles.push({
-                      id: file.id,
-                      filename: file.filename,
-                      bytes: file.bytes,
-                      created_at: file.created_at,
-                      purpose: file.purpose,
-                      source: 'vector_store_recent',
-                      vector_store_id: vectorStoreId
-                    });
-                  }
-                }
-              } catch (listFilesError) {
-                console.error('Error al listar archivos:', listFilesError);
-              }
-            }
-          }
-        } catch (vectorStoreError) {
-          console.error(`Error al obtener el vector store ${vectorStoreId}:`, vectorStoreError);
-        }
-      }
-    }
-
-    console.log(`Total de archivos encontrados: ${allFiles.length}`);
-    
-    if (allFiles.length === 0) {
-      console.log('No se encontraron archivos para este asistente');
-      
-      // Intento adicional: buscar archivos recientes
-      console.log("Intentando buscar archivos recientes como último recurso...");
       try {
-        const allFilesResponse = await axios.get(
-          'https://api.openai.com/v1/files?purpose=assistants',
+        // Obtener los archivos del vector store
+        const vectorStoreFilesResponse = await axios.get(
+          `https://api.openai.com/v1/vector_stores/${vectorStoreId}/files`,
           {
             headers: {
               'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'OpenAI-Beta': 'assistants=v2'
             }
           }
         );
         
-        const filesData = allFilesResponse.data.data || [];
-        // Tomar los archivos más recientes (últimos 10)
-        const recentFiles = filesData.slice(0, 10);
+        const filesData = vectorStoreFilesResponse.data;
         
-        for (const file of recentFiles) {
-          console.log(`Archivo reciente encontrado: ${file.filename}`);
-          allFiles.push({
-            id: file.id,
-            filename: file.filename,
-            bytes: file.bytes,
-            created_at: file.created_at,
-            purpose: file.purpose,
-            source: 'recent'
-          });
+        if (filesData.data && filesData.data.length > 0) {
+          console.log(`Vector store contiene ${filesData.data.length} archivos`);
+          
+          for (const file of filesData.data) {
+            try {
+              const fileInfo = await openai.files.retrieve(file.id);
+              
+              allFiles.push({
+                id: fileInfo.id,
+                filename: fileInfo.filename,
+                bytes: fileInfo.bytes,
+                created_at: fileInfo.created_at,
+                purpose: fileInfo.purpose,
+                source: 'vector_store',
+                vector_store_id: vectorStoreId
+              });
+            } catch (fileError) {
+              console.error(`Error al obtener detalles del archivo ${file.id}:`, fileError);
+            }
+          }
+        } else {
+          console.log('No se encontraron archivos en el vector store');
         }
+      } catch (vectorStoreError) {
+        console.error(`Error al obtener archivos del vector store ${vectorStoreId}:`, vectorStoreError);
+      }
+    } else {
+      console.log('El asistente no tiene vector stores asociados');
+      
+      // Si no hay vector store, intentamos buscar archivos añadidos directamente al asistente
+      if (assistant.file_ids && assistant.file_ids.length > 0) {
+        console.log(`El asistente tiene ${assistant.file_ids.length} archivos directamente asociados`);
         
-        console.log(`Total de archivos recientes encontrados: ${recentFiles.length}`);
-      } catch (listFilesError) {
-        console.error('Error al listar archivos recientes:', listFilesError);
+        for (const fileId of assistant.file_ids) {
+          try {
+            const fileInfo = await openai.files.retrieve(fileId);
+            
+            allFiles.push({
+              id: fileInfo.id,
+              filename: fileInfo.filename,
+              bytes: fileInfo.bytes,
+              created_at: fileInfo.created_at,
+              purpose: fileInfo.purpose,
+              source: 'direct'
+            });
+          } catch (fileError) {
+            console.error(`Error al obtener detalles del archivo ${fileId}:`, fileError);
+          }
+        }
+      } else {
+        console.log('El asistente no tiene archivos directamente asociados');
       }
     }
+
+    console.log(`Total de archivos encontrados: ${allFiles.length}`);
     
     res.status(200).json({
       success: true,
@@ -1085,21 +991,12 @@ exports.deleteAssistantFile = async (req, res) => {
     const assistant = await openai.beta.assistants.retrieve(gpt.openaiId);
     let fileFound = false;
     let vectorStoreToUpdate = null;
+    let isAppManagedFile = false;
 
-    // 1. Comprobar si el archivo está directamente asociado al asistente
-    if (assistant.file_ids && assistant.file_ids.includes(fileId)) {
-      fileFound = true;
-      console.log(`Archivo ${fileId} encontrado directamente asociado al asistente`);
-      
-      // Eliminar el archivo del asistente
-      const updatedFileIds = assistant.file_ids.filter(id => id !== fileId);
-      await openai.beta.assistants.update(gpt.openaiId, {
-        file_ids: updatedFileIds
-      });
-      console.log(`Archivo ${fileId} eliminado del asistente ${gpt.openaiId}`);
-    }
+    // IMPORTANTE: Ya no verificamos si el archivo está directamente asociado al asistente
+    // para evitar eliminar archivos de la base de conocimiento original
 
-    // 2. Comprobar si el archivo está en algún vector store asociado al asistente
+    // Buscar el archivo solo en vector stores creados por nuestra aplicación
     if (assistant.tool_resources && 
         assistant.tool_resources.file_search && 
         assistant.tool_resources.file_search.vector_store_ids && 
@@ -1121,11 +1018,18 @@ exports.deleteAssistantFile = async (req, res) => {
           
           const vectorStore = vectorStoreResponse.data;
           
+          // VERIFICACIÓN CLAVE: Solo procesar vector stores creados por nuestra aplicación
+          if (!vectorStore.name.startsWith('app_')) {
+            console.log(`Vector store ${vectorStoreId} no fue creado por esta aplicación, omitiendo`);
+            continue;
+          }
+          
           // Verificar si el vector store contiene el archivo
           if (vectorStore.file_ids && vectorStore.file_ids.includes(fileId)) {
             fileFound = true;
+            isAppManagedFile = true;
             vectorStoreToUpdate = vectorStoreId;
-            console.log(`Archivo ${fileId} encontrado en vector store ${vectorStoreId}`);
+            console.log(`Archivo ${fileId} encontrado en vector store ${vectorStoreId} creado por nuestra aplicación`);
             break;
           }
           
@@ -1144,8 +1048,9 @@ exports.deleteAssistantFile = async (req, res) => {
           const filesData = vectorStoreFilesResponse.data;
           if (filesData.data && filesData.data.some(file => file.id === fileId)) {
             fileFound = true;
+            isAppManagedFile = true;
             vectorStoreToUpdate = vectorStoreId;
-            console.log(`Archivo ${fileId} encontrado en los files del vector store ${vectorStoreId}`);
+            console.log(`Archivo ${fileId} encontrado en los files del vector store ${vectorStoreId} creado por nuestra aplicación`);
             break;
           }
         } catch (error) {
@@ -1153,8 +1058,8 @@ exports.deleteAssistantFile = async (req, res) => {
         }
       }
       
-      // Si encontramos el archivo en un vector store, eliminarlo
-      if (vectorStoreToUpdate) {
+      // Si encontramos el archivo en un vector store creado por nuestra aplicación, eliminarlo
+      if (vectorStoreToUpdate && isAppManagedFile) {
         try {
           console.log(`Eliminando archivo ${fileId} del vector store ${vectorStoreToUpdate}`);
           
@@ -1219,6 +1124,11 @@ exports.deleteAssistantFile = async (req, res) => {
           }
         } catch (error) {
           console.error(`Error al eliminar el archivo del vector store:`, error);
+          return res.status(500).json({
+            success: false,
+            error: 'Error al eliminar el archivo del vector store',
+            details: error.message
+          });
         }
       }
     }
@@ -1226,7 +1136,14 @@ exports.deleteAssistantFile = async (req, res) => {
     if (!fileFound) {
       return res.status(404).json({
         success: false,
-        error: 'Archivo no encontrado en el asistente ni en sus vector stores'
+        error: 'Archivo no encontrado en ningún vector store creado por esta aplicación'
+      });
+    }
+
+    if (!isAppManagedFile) {
+      return res.status(403).json({
+        success: false,
+        error: 'No se permite eliminar archivos que no fueron subidos desde esta aplicación'
       });
     }
 

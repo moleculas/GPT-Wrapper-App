@@ -379,7 +379,7 @@ const GPTChatPage = () => {
                   endIcon={filesManagerOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                   sx={{ fontSize: '0.75rem' }}
                 >
-                  Archivos del asistente
+                  Archivos personalizados
                 </Button>
 
                 {/* Botón de reseteo de memoria - solo visible si hay mensajes */}
@@ -640,7 +640,7 @@ const GPTChatPage = () => {
                   }}
                   onClick={() => setFilesManagerOpen(!filesManagerOpen)}
                 >
-                  {filesManagerOpen ? 'Ocultar archivos del asistente' : 'Mostrar archivos del asistente'}
+                  {filesManagerOpen ? 'Ocultar archivos del asistente' : 'Gestionar archivos personalizados'}
                 </Typography>
               </Box>
             </Box>
