@@ -65,7 +65,7 @@ const AssistantFilesManager = ({ gptId }) => {
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files);
     await processFiles(files);
-    
+
     // Limpiar input para permitir seleccionar el mismo archivo nuevamente
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -123,7 +123,6 @@ const AssistantFilesManager = ({ gptId }) => {
     });
   };
 
-  // Subir archivos al asistente
   const handleUpload = () => {
     if (selectedFiles.length === 0) return;
 
@@ -134,8 +133,11 @@ const AssistantFilesManager = ({ gptId }) => {
       .unwrap()
       .then(() => {
         setSelectedFiles([]);
-        // Recargar la lista de archivos
-        dispatch(getAssistantUserFiles(gptId));
+        console.log('Archivos subidos correctamente, recargando lista de archivos...');
+        // Esperar un momento antes de recargar la lista para dar tiempo a que se procese en OpenAI
+        setTimeout(() => {
+          dispatch(getAssistantUserFiles(gptId));
+        }, 1000);
       })
       .catch(error => {
         console.error('Error al subir archivos:', error);
@@ -174,17 +176,22 @@ const AssistantFilesManager = ({ gptId }) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Refrescar lista de archivos
   const handleRefresh = () => {
-    dispatch(getAssistantUserFiles(gptId));
+    // Mostrar estado de carga
+    dispatch({ type: 'gpts/getFiles/pending' });
+    
+    // Esperar un momento antes de intentar recargar la lista
+    setTimeout(() => {
+      dispatch(getAssistantUserFiles(gptId));
+    }, 2000); // Esperar 2 segundos para dar tiempo a que OpenAI actualice
   };
 
   // Obtener icono según tipo de archivo
   const getFileIcon = (filename) => {
     if (!filename) return <FileIcon />;
-    
+
     const extension = filename.split('.').pop().toLowerCase();
-    
+
     if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
       return <ImageIcon />;
     } else if (extension === 'pdf') {
@@ -217,10 +224,10 @@ const AssistantFilesManager = ({ gptId }) => {
           <Typography variant="h6">
             Archivos para este asistente
           </Typography>
-          
+
           <Box>
             <Tooltip title="Actualizar lista de archivos">
-              <IconButton 
+              <IconButton
                 onClick={handleRefresh}
                 disabled={loading}
                 sx={{ mr: 1 }}
@@ -228,7 +235,7 @@ const AssistantFilesManager = ({ gptId }) => {
                 <RefreshIcon />
               </IconButton>
             </Tooltip>
-            
+
             <Button
               variant="contained"
               color="primary"
@@ -240,7 +247,7 @@ const AssistantFilesManager = ({ gptId }) => {
             </Button>
           </Box>
         </Box>
-        
+
         <Typography variant="body2" color="textSecondary" gutterBottom>
           Los archivos que subas estarán disponibles para el asistente en todas las conversaciones. Estos archivos se almacenan en OpenAI y solo tú puedes verlos y eliminarlos.
         </Typography>
@@ -252,7 +259,7 @@ const AssistantFilesManager = ({ gptId }) => {
           {error}
         </Alert>
       )}
-      
+
       {uploadSuccess && (
         <Alert severity="success" sx={{ mb: 2 }}>
           Archivos subidos correctamente
@@ -265,7 +272,7 @@ const AssistantFilesManager = ({ gptId }) => {
           <Typography variant="subtitle2" gutterBottom>
             Archivos seleccionados para subir
           </Typography>
-          
+
           <List dense>
             {selectedFiles.map((file, index) => (
               <ListItem
@@ -279,7 +286,7 @@ const AssistantFilesManager = ({ gptId }) => {
                 <ListItemIcon>
                   {getFileIcon(file.name)}
                 </ListItemIcon>
-                
+
                 <ListItemText
                   primary={file.name}
                   secondary={formatFileSize(file.size)}
@@ -287,7 +294,7 @@ const AssistantFilesManager = ({ gptId }) => {
               </ListItem>
             ))}
           </List>
-          
+
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
             <Button
               variant="contained"
@@ -307,7 +314,7 @@ const AssistantFilesManager = ({ gptId }) => {
         <Typography variant="subtitle1" gutterBottom>
           Archivos disponibles para el asistente
         </Typography>
-        
+
         {loading && !userFiles ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
             <CircularProgress />
@@ -324,8 +331,8 @@ const AssistantFilesManager = ({ gptId }) => {
               <React.Fragment key={file.id}>
                 <ListItem
                   secondaryAction={
-                    <IconButton 
-                      edge="end" 
+                    <IconButton
+                      edge="end"
                       onClick={() => handleDeleteConfirm(file)}
                       color="error"
                     >
@@ -336,7 +343,7 @@ const AssistantFilesManager = ({ gptId }) => {
                   <ListItemIcon>
                     {getFileIcon(file.filename)}
                   </ListItemIcon>
-                  
+
                   <ListItemText
                     primary={file.filename.replace(/^user_/, '')} // Quitar prefijo user_ al mostrar
                     secondary={
@@ -373,14 +380,14 @@ const AssistantFilesManager = ({ gptId }) => {
 
       {/* Diálogo de confirmación para eliminar archivo */}
       {confirmDelete && (
-        <Paper 
-          elevation={3} 
-          sx={{ 
-            position: 'fixed', 
-            top: '50%', 
-            left: '50%', 
-            transform: 'translate(-50%, -50%)', 
-            p: 3, 
+        <Paper
+          elevation={3}
+          sx={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            p: 3,
             width: '320px',
             zIndex: 1300,
             backgroundColor: 'background.paper'
@@ -389,26 +396,26 @@ const AssistantFilesManager = ({ gptId }) => {
           <Typography variant="h6" gutterBottom>
             Confirmar eliminación
           </Typography>
-          
+
           <Typography variant="body2" gutterBottom>
             ¿Estás seguro de que quieres eliminar el archivo <strong>{confirmDelete.filename?.replace(/^user_/, '')}</strong>?
           </Typography>
-          
+
           <Typography variant="caption" color="error" gutterBottom display="block">
             Esta acción no se puede deshacer.
           </Typography>
-          
+
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2, gap: 1 }}>
-            <Button 
-              onClick={cancelDelete} 
+            <Button
+              onClick={cancelDelete}
               variant="outlined"
               disabled={loading}
             >
               Cancelar
             </Button>
-            <Button 
-              onClick={confirmDeleteFile} 
-              variant="contained" 
+            <Button
+              onClick={confirmDeleteFile}
+              variant="contained"
               color="error"
               disabled={loading}
             >

@@ -59,9 +59,9 @@ const GPTChatPage = () => {
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  const MAX_FILE_SIZE = 20 * 1024 * 1024; 
+  const MAX_FILE_SIZE = 20 * 1024 * 1024;
   const ALLOWED_FILE_TYPES = [
-    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
     'application/pdf', 'text/plain', 'text/csv',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // docx
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
@@ -98,9 +98,9 @@ const GPTChatPage = () => {
     if (e && e.preventDefault) {
       e.preventDefault();
     }
-  
+
     if (!message.trim() && files.length === 0) return;
-  
+
     // Preparar los archivos para enviar
     const processedFiles = files.map(file => ({
       name: file.name,
@@ -108,16 +108,16 @@ const GPTChatPage = () => {
       size: file.size,
       data: file.data // La data en base64
     }));
-  
+
     console.log('Enviando mensaje con archivos:', processedFiles.length);
-    
+
     dispatch(sendMessageToAssistant({
       gptId: id,
       threadId,
       message,
       files: processedFiles
     }));
-  
+
     setMessage('');
     setFiles([]);
   };
@@ -132,7 +132,7 @@ const GPTChatPage = () => {
   const handleFileChange = async (e) => {
     const selectedFiles = Array.from(e.target.files);
     await processFiles(selectedFiles);
-    
+
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -140,29 +140,29 @@ const GPTChatPage = () => {
 
   const processFiles = async (selectedFiles) => {
     const newFiles = [];
-    
+
     for (const file of selectedFiles) {
       if (!ALLOWED_FILE_TYPES.includes(file.type)) {
         alert(`Tipo de archivo no permitido: ${file.type}`);
         continue;
       }
-      
+
       if (file.size > MAX_FILE_SIZE) {
         alert(`El archivo ${file.name} excede el tamaño máximo permitido (20MB)`);
         continue;
       }
-      
+
       const base64Data = await readFileAsBase64(file);
-      
+
       newFiles.push({
         name: file.name,
         type: file.type,
         size: file.size,
         preview: file.type.startsWith('image/') ? base64Data : null,
-        data: base64Data.split(',')[1] 
+        data: base64Data.split(',')[1]
       });
     }
-    
+
     setFiles(prev => [...prev, ...newFiles]);
   };
 
@@ -182,7 +182,7 @@ const GPTChatPage = () => {
   const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (e.type === 'dragenter' || e.type === 'dragover') {
       setDragActive(true);
     } else if (e.type === 'dragleave') {
@@ -194,7 +194,7 @@ const GPTChatPage = () => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       await processFiles(Array.from(e.dataTransfer.files));
     }
@@ -238,7 +238,7 @@ const GPTChatPage = () => {
   const renderMessage = (msg) => {
     const isUser = msg.role === 'user';
     const messageContent = msg.content[0]?.text?.value || "";
-    
+
     const fileAttachments = msg.content
       .filter(contentItem => contentItem.type === 'image_file' || contentItem.type === 'file_attachment')
       .map(file => ({
@@ -279,7 +279,7 @@ const GPTChatPage = () => {
               </Typography>
               <Stack direction="row" spacing={1} flexWrap="wrap">
                 {fileAttachments.map((file, index) => (
-                  <Chip 
+                  <Chip
                     key={index}
                     icon={<AttachFileIcon />}
                     label={`Archivo ${index + 1}`}
@@ -401,7 +401,13 @@ const GPTChatPage = () => {
 
             {/* Panel expandible para gestionar archivos del asistente */}
             <Collapse in={filesManagerOpen} timeout="auto">
-              <Box sx={{ p: 2, borderBottom: '1px solid rgba(0, 0, 0, 0.12)' }}>
+              <Box sx={{
+                p: 2,
+                borderBottom: '1px solid rgba(0, 0, 0, 0.12)',
+                position: 'relative',
+                zIndex: 10,
+                backgroundColor: 'background.default'
+              }}>
                 <AssistantFilesManager gptId={id} />
               </Box>
             </Collapse>
@@ -412,7 +418,9 @@ const GPTChatPage = () => {
               overflow: 'auto',
               p: 2,
               display: 'flex',
-              flexDirection: 'column'
+              flexDirection: 'column',
+              position: 'relative',
+              zIndex: 1
             }}>
               {!visibleMessages || visibleMessages.length === 0 ? (
                 <Box sx={{
@@ -615,18 +623,18 @@ const GPTChatPage = () => {
                   </Box>
                 )}
               </Box>
-              
+
               <Box sx={{ mt: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.7rem' }}>
                   Formatos permitidos: imágenes, PDF, documentos, hojas de cálculo. Máximo 20MB por archivo.
                 </Typography>
-                
+
                 {/* Añadimos un texto clickeable para abrir el panel de archivos permanentes */}
-                <Typography 
-                  variant="caption" 
-                  color="primary" 
-                  sx={{ 
-                    fontSize: '0.7rem', 
+                <Typography
+                  variant="caption"
+                  color="primary"
+                  sx={{
+                    fontSize: '0.7rem',
                     cursor: 'pointer',
                     textDecoration: 'underline'
                   }}
@@ -643,7 +651,7 @@ const GPTChatPage = () => {
           </Box>
         )}
       </Box>
-      
+
       {/* Diálogo de confirmación para resetear memoria */}
       <ConfirmDialog
         open={resetDialogOpen}
