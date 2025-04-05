@@ -1,3 +1,4 @@
+// Modificación en client/src/pages/GPTChatPage.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
@@ -32,12 +33,14 @@ const GPTChatPage = () => {
   const dispatch = useDispatch();
   const { currentGPT, loading: gptLoading } = useSelector(state => state.gpts);
   const { threadId, messages, loading: chatLoading, error } = useSelector(state => state.gpts.chat || {});
+  const { user } = useSelector(state => state.auth);
 
   const [message, setMessage] = useState('');
   const [initializing, setInitializing] = useState(true);
   const [messageLimit, setMessageLimit] = useState(10);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [filesManagerOpen, setFilesManagerOpen] = useState(false);
+  const [localMessages, setLocalMessages] = useState([]);
 
   const chatEndRef = useRef(null);
 
@@ -64,8 +67,14 @@ const GPTChatPage = () => {
   }, [dispatch, id]);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messages && messages.length > 0) {
+      setLocalMessages(messages);
+    }
   }, [messages]);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [localMessages]);
 
   const handleSendMessage = (e) => {
     if (e && e.preventDefault) {
@@ -73,7 +82,22 @@ const GPTChatPage = () => {
     }
 
     if (!message.trim()) return;
+    
+    const tempUserMessage = {
+      id: `temp-${Date.now()}`,
+      role: 'user',
+      content: [
+        {
+          type: 'text',
+          text: {
+            value: message
+          }
+        }
+      ]
+    };
 
+    setLocalMessages(prev => [...prev, tempUserMessage]);
+    
     dispatch(sendMessageToAssistant({
       gptId: id,
       threadId,
@@ -101,6 +125,7 @@ const GPTChatPage = () => {
         }
       })
       .then(() => {
+        setLocalMessages([]);
         setInitializing(false);
       })
       .catch((error) => {
@@ -110,6 +135,14 @@ const GPTChatPage = () => {
 
   const handleResetButtonClick = () => {
     setResetDialogOpen(true);
+  };
+
+  // Función para obtener las iniciales del usuario
+  const getUserInitial = () => {
+    if (user && user.name) {
+      return user.name.charAt(0).toUpperCase();
+    }
+    return 'U'; // Valor predeterminado si no hay usuario o nombre
   };
 
   const renderMessage = (msg) => {
@@ -137,7 +170,7 @@ const GPTChatPage = () => {
             bgcolor: isUser ? 'primary.main' : 'secondary.main'
           }}
         >
-          {isUser ? 'U' : 'AI'}
+          {isUser ? getUserInitial() : 'AI'}
         </Avatar>
         <Paper
           elevation={0}
@@ -201,8 +234,8 @@ const GPTChatPage = () => {
       </Box>
     );
   };
-
-  const visibleMessages = messages ? messages.filter(msg =>
+  
+  const visibleMessages = localMessages ? localMessages.filter(msg =>
     msg.metadata?.system_instruction !== "true"
   ) : [];
 

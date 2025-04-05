@@ -8,14 +8,12 @@ import {
   ListItemText,
   Divider,
   Typography,
-  Box,
-  IconButton
+  Box
 } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import ChatIcon from '@mui/icons-material/Chat';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AddIcon from '@mui/icons-material/Add';
-import CloseIcon from '@mui/icons-material/Close';
 import { useDispatch, useSelector } from 'react-redux';
 import { toggleSidebar } from '../../redux/slices/uiSlice';
 import { useNavigate } from 'react-router-dom';
@@ -108,16 +106,49 @@ const Sidebar = ({ width }) => {
                   <ListItemButton
                     key={gpt._id}
                     onClick={() => handleNavigation(`/gpts/${gpt._id}`)}
+                    sx={{
+                      py: 1.5,
+                      pl: 2,
+                      pr: 1,
+                      display: 'flex',
+                      alignItems: 'flex-start', // Alinear al inicio para mejor distribución vertical
+                      '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' }
+                    }}
                   >
-                    <ListItemIcon>
-                      <ChatIcon />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={gpt.name}
-                      secondary={gpt.description.length > 30
-                        ? `${gpt.description.substring(0, 30)}...`
-                        : gpt.description}
+                    <ChatIcon
+                      color="primary"
+                      sx={{
+                        fontSize: 20,
+                        mt: 0.5,
+                        mr: 1.5,
+                        minWidth: 20
+                      }}
                     />
+                    <Box sx={{ flex: 1, overflow: 'hidden' }}>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontWeight: 500,
+                          lineHeight: 1.3,
+                          mb: 0.6,
+                          overflow: 'hidden'
+                        }}
+                      >
+                        {gpt.name}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{
+                          display: 'block',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {gpt.description}
+                      </Typography>
+                    </Box>
                   </ListItemButton>
                 ))
               ) : (

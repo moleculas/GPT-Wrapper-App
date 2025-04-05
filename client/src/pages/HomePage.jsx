@@ -138,35 +138,40 @@ const HomePage = () => {
           {loading ? (
             <Typography>Cargando Asistentes...</Typography>
           ) : gpts && gpts.length > 0 ? (
-            <Grid container spacing={3}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {gpts.map((gpt) => (
-                <Grid item key={gpt._id} xs={12} sm={6} md={4}>
-                  <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                    <CardActionArea onClick={() => navigate(`/gpts/${gpt._id}`)}>
-                      {gpt.imageUrl && (
-                        <CardMedia
-                          component="img"
-                          height="140"
-                          image={gpt.imageUrl}
-                          alt={gpt.name}
-                        />
-                      )}
-                      <CardContent sx={{ flexGrow: 1 }}>
-                        <Typography gutterBottom variant="h6" component="div">
-                          {gpt.name}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {gpt.description}
-                        </Typography>
-                        <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                          Modelo: {gpt.model}
-                        </Typography>
-                      </CardContent>
-                    </CardActionArea>
-                  </Card>
-                </Grid>
+                <Card 
+                  key={gpt._id} 
+                  sx={{ 
+                    width: '100%', 
+                    display: 'flex', 
+                    flexDirection: 'column' 
+                  }}
+                >
+                  <CardActionArea onClick={() => navigate(`/gpts/${gpt._id}`)}>
+                    {gpt.imageUrl && (
+                      <CardMedia
+                        component="img"
+                        height="140"
+                        image={gpt.imageUrl}
+                        alt={gpt.name}
+                      />
+                    )}
+                    <CardContent sx={{ flexGrow: 1 }}>
+                      <Typography gutterBottom variant="h6" component="div">
+                        {gpt.name}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {gpt.description}
+                      </Typography>
+                      <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                        Modelo: {gpt.model}
+                      </Typography>
+                    </CardContent>
+                  </CardActionArea>
+                </Card>
               ))}
-            </Grid>
+            </Box>
           ) : (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <Typography variant="body1" gutterBottom>
