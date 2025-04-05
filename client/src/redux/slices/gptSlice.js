@@ -195,7 +195,6 @@ export const resetGPTMemory = createAsyncThunk(
   }
 );
 
-// Nuevas acciones para la gestión de archivos
 export const uploadAssistantFiles = createAsyncThunk(
   'gpts/uploadFiles',
   async ({ gptId, files }, { getState, rejectWithValue }) => {
@@ -297,7 +296,6 @@ const gptSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Fetch all GPTs
       .addCase(fetchGPTs.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -310,8 +308,6 @@ const gptSlice = createSlice({
         state.loading = false;
         state.error = action.payload?.error || 'Error al cargar GPTs';
       })
-
-      // Fetch all GPTs for admin
       .addCase(fetchAllGPTs.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -324,8 +320,6 @@ const gptSlice = createSlice({
         state.loading = false;
         state.error = action.payload?.error || 'Error al cargar todos los GPTs';
       })
-
-      // Fetch available GPTs from OpenAI
       .addCase(fetchAvailableGPTs.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -338,8 +332,6 @@ const gptSlice = createSlice({
         state.loading = false;
         state.error = action.payload?.error || 'Error al cargar GPTs disponibles de OpenAI';
       })
-
-      // Fetch single GPT
       .addCase(fetchGPT.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -352,8 +344,6 @@ const gptSlice = createSlice({
         state.loading = false;
         state.error = action.payload?.error || 'Error al cargar GPT';
       })
-
-      // Create GPT
       .addCase(createGPT.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -367,8 +357,6 @@ const gptSlice = createSlice({
         state.loading = false;
         state.error = action.payload?.error || 'Error al crear GPT';
       })
-
-      // Update GPT
       .addCase(updateGPT.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -386,8 +374,6 @@ const gptSlice = createSlice({
         state.loading = false;
         state.error = action.payload?.error || 'Error al actualizar GPT';
       })
-
-      // Delete GPT
       .addCase(deleteGPT.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -403,8 +389,6 @@ const gptSlice = createSlice({
         state.loading = false;
         state.error = action.payload?.error || 'Error al eliminar GPT';
       })
-
-      // Chat with GPT (mantener para compatibilidad)
       .addCase(chatWithGPT.pending, (state) => {
         state.chat.loading = true;
         state.chat.error = null;
@@ -417,9 +401,6 @@ const gptSlice = createSlice({
         state.chat.loading = false;
         state.chat.error = action.payload?.error || 'Error en la comunicación con el GPT';
       })
-
-      // Nuevos reducers para los threads
-      // Create Thread
       .addCase(createThread.pending, (state) => {
         state.chat.loading = true;
         state.chat.error = null;
@@ -432,8 +413,6 @@ const gptSlice = createSlice({
         state.chat.loading = false;
         state.chat.error = action.payload?.error || 'Error al crear el thread';
       })
-
-      // Get Thread Messages
       .addCase(getThreadMessages.pending, (state) => {
         state.chat.loading = true;
         state.chat.error = null;
@@ -446,8 +425,6 @@ const gptSlice = createSlice({
         state.chat.loading = false;
         state.chat.error = action.payload?.error || 'Error al obtener los mensajes';
       })
-
-      // Send Message to Assistant
       .addCase(sendMessageToAssistant.pending, (state) => {
         state.chat.loading = true;
         state.chat.error = null;
@@ -460,8 +437,6 @@ const gptSlice = createSlice({
         state.chat.loading = false;
         state.chat.error = action.payload?.error || 'Error al enviar el mensaje';
       })
-
-      // Reset memory
       .addCase(resetGPTMemory.pending, (state) => {
         state.chat.loading = true;
         state.chat.error = null;
@@ -475,7 +450,6 @@ const gptSlice = createSlice({
         state.chat.loading = false;
         state.chat.error = action.payload?.error || 'Error al resetear la memoria';
       })
-
       .addCase(uploadAssistantFiles.pending, (state) => {
         state.files.loading = true;
         state.files.error = null;
@@ -484,10 +458,8 @@ const gptSlice = createSlice({
       .addCase(uploadAssistantFiles.fulfilled, (state, action) => {
         state.files.loading = false;
         state.files.uploadSuccess = true;
-        
-        // Si hay archivos subidos con éxito, los añadimos a la lista
+
         if (action.payload.data.uploaded && action.payload.data.uploaded.length > 0) {
-          // Si userFiles ya existe, mantener los archivos existentes y añadir los nuevos
           const newFiles = action.payload.data.uploaded.map(file => ({
             id: file.openai_id,
             filename: file.name,
@@ -495,7 +467,7 @@ const gptSlice = createSlice({
             type: file.type,
             size: file.size
           }));
-          
+
           state.files.userFiles = [...(state.files.userFiles || []), ...newFiles];
         }
       })
@@ -503,8 +475,6 @@ const gptSlice = createSlice({
         state.files.loading = false;
         state.files.error = action.payload?.error || 'Error al subir archivos';
       })
-      
-      // Get Assistant User Files
       .addCase(getAssistantUserFiles.pending, (state) => {
         state.files.loading = true;
         state.files.error = null;
@@ -517,16 +487,12 @@ const gptSlice = createSlice({
         state.files.loading = false;
         state.files.error = action.payload?.error || 'Error al obtener archivos';
       })
-      
-      // Delete Assistant File
       .addCase(deleteAssistantFile.pending, (state) => {
         state.files.loading = true;
         state.files.error = null;
       })
       .addCase(deleteAssistantFile.fulfilled, (state, action) => {
         state.files.loading = false;
-        
-        // Eliminar el archivo de la lista
         if (state.files.userFiles) {
           state.files.userFiles = state.files.userFiles.filter(
             file => file.id !== action.payload.fileId

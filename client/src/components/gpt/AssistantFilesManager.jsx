@@ -35,23 +35,21 @@ const AssistantFilesManager = ({ gptId }) => {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const fileInputRef = useRef(null);
 
-  const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+  const MAX_FILE_SIZE = 20 * 1024 * 1024; 
   const ALLOWED_FILE_TYPES = [
     'image/jpeg', 'image/png', 'image/gif', 'image/webp',
     'application/pdf', 'text/plain', 'text/csv',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // docx
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation' // pptx
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation' 
   ];
-
-  // Cargar archivos al montar el componente
+  
   useEffect(() => {
     if (gptId) {
       dispatch(getAssistantUserFiles(gptId));
     }
   }, [dispatch, gptId]);
-
-  // Limpiar el estado de éxito después de mostrar mensaje
+  
   useEffect(() => {
     if (uploadSuccess) {
       const timer = setTimeout(() => {
@@ -60,44 +58,39 @@ const AssistantFilesManager = ({ gptId }) => {
       return () => clearTimeout(timer);
     }
   }, [uploadSuccess, dispatch]);
-
-  // Manejar selección de archivos
+  
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files);
     await processFiles(files);
-
-    // Limpiar input para permitir seleccionar el mismo archivo nuevamente
+    
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
-
-  // Procesar archivos seleccionados
+  
   const processFiles = async (files) => {
     const validFiles = [];
     const errors = [];
 
     for (const file of files) {
-      // Validar tipo de archivo
+      
       if (!ALLOWED_FILE_TYPES.includes(file.type)) {
         errors.push(`Tipo de archivo no permitido: ${file.type}`);
         continue;
       }
-
-      // Validar tamaño
+      
       if (file.size > MAX_FILE_SIZE) {
         errors.push(`El archivo ${file.name} excede el tamaño máximo permitido (20MB)`);
         continue;
       }
-
-      // Leer archivo como base64
+      
       try {
         const base64Data = await readFileAsBase64(file);
         validFiles.push({
           name: file.name,
           type: file.type,
           size: file.size,
-          data: base64Data.split(',')[1] // Solo la parte de datos, sin el prefijo
+          data: base64Data.split(',')[1] 
         });
       } catch (error) {
         errors.push(`Error al leer el archivo ${file.name}: ${error.message}`);
@@ -112,8 +105,7 @@ const AssistantFilesManager = ({ gptId }) => {
       setSelectedFiles(prev => [...prev, ...validFiles]);
     }
   };
-
-  // Convertir archivo a base64
+  
   const readFileAsBase64 = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -132,9 +124,7 @@ const AssistantFilesManager = ({ gptId }) => {
     }))
       .unwrap()
       .then(() => {
-        setSelectedFiles([]);
-        console.log('Archivos subidos correctamente, recargando lista de archivos...');
-        // Esperar un momento antes de recargar la lista para dar tiempo a que se procese en OpenAI
+        setSelectedFiles([]);        
         setTimeout(() => {
           dispatch(getAssistantUserFiles(gptId));
         }, 1000);
@@ -144,12 +134,11 @@ const AssistantFilesManager = ({ gptId }) => {
       });
   };
 
-  // Iniciar proceso de eliminación (mostrar confirmación)
+  
   const handleDeleteConfirm = (file) => {
     setConfirmDelete(file);
   };
-
-  // Confirmar y ejecutar eliminación
+  
   const confirmDeleteFile = () => {
     if (!confirmDelete) return;
 
@@ -165,28 +154,24 @@ const AssistantFilesManager = ({ gptId }) => {
         console.error('Error al eliminar archivo:', error);
       });
   };
-
-  // Cancelar eliminación
+  
   const cancelDelete = () => {
     setConfirmDelete(null);
   };
-
-  // Quitar archivo de la lista de seleccionados
+  
   const handleRemoveSelected = (index) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleRefresh = () => {
-    // Mostrar estado de carga
+    
     dispatch({ type: 'gpts/getFiles/pending' });
     
-    // Esperar un momento antes de intentar recargar la lista
     setTimeout(() => {
       dispatch(getAssistantUserFiles(gptId));
-    }, 2000); // Esperar 2 segundos para dar tiempo a que OpenAI actualice
+    }, 2000); 
   };
-
-  // Obtener icono según tipo de archivo
+  
   const getFileIcon = (filename) => {
     if (!filename) return <FileIcon />;
 
@@ -202,16 +187,14 @@ const AssistantFilesManager = ({ gptId }) => {
       return <FileIcon />;
     }
   };
-
-  // Formatear tamaño de archivo
+  
   const formatFileSize = (bytes) => {
     if (!bytes || bytes === 0) return '0 B';
     if (bytes < 1024) return `${bytes} B`;
     else if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
     else return `${(bytes / 1048576).toFixed(1)} MB`;
   };
-
-  // Formatear fecha
+  
   const formatDate = (timestamp) => {
     if (!timestamp) return 'Fecha desconocida';
     return new Date(timestamp * 1000).toLocaleString();
@@ -249,15 +232,8 @@ const AssistantFilesManager = ({ gptId }) => {
         </Box>
 
         <Typography variant="body2" color="textSecondary" gutterBottom>
-          Los archivos que subas estarán disponibles para el asistente en todas las conversaciones. Solo se muestran archivos subidos desde esta aplicación, no los archivos base del asistente.
-        </Typography>
-        
-        {/* Nuevo mensaje informativo sobre archivos base */}
-        <Alert severity="info" sx={{ mt: 1, mb: 2 }}>
-          <Typography variant="body2">
-            Los archivos de la base de conocimiento original del asistente no se muestran aquí y no pueden ser eliminados.
-          </Typography>
-        </Alert>
+          Los archivos que subas estarán disponibles para el asistente en todas las conversaciones.
+        </Typography>                
       </Box>
 
       {/* Mensajes de estado */}

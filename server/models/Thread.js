@@ -25,7 +25,6 @@ const ThreadSchema = new mongoose.Schema({
   }
 });
 
-// Índice compuesto para búsquedas eficientes
 ThreadSchema.index({ userId: 1, gptId: 1 }, { unique: true });
 
 module.exports = mongoose.model('Thread', ThreadSchema);

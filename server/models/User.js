@@ -40,18 +40,16 @@ const UserSchema = new mongoose.Schema({
   }
 });
 
-// Encriptar contraseña usando bcrypt
-UserSchema.pre('save', async function(next) {
+UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
     next();
   }
-  
+
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Firmar JWT y retornar
-UserSchema.methods.getSignedJwtToken = function() {
+UserSchema.methods.getSignedJwtToken = function () {
   return jwt.sign(
     { id: this._id, role: this.role },
     process.env.JWT_SECRET,
@@ -59,8 +57,7 @@ UserSchema.methods.getSignedJwtToken = function() {
   );
 };
 
-// Comprobar si la contraseña ingresada coincide con la almacenada
-UserSchema.methods.matchPassword = async function(enteredPassword) {
+UserSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 

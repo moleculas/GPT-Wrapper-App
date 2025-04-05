@@ -12,7 +12,6 @@ const {
   getThreadMessages,
   sendMessageToAssistant,
   deleteGPTThreads,
-  // Nuevas funciones para archivos
   uploadAssistantFile,
   getAssistantUserFiles,
   deleteAssistantFile
@@ -20,32 +19,23 @@ const {
 const { protect, authorize } = require('../../middleware/auth');
 
 router.use(protect);
-
 router.route('/')
   .get(getGPTs)
   .post(authorize('admin'), createGPT);
-
 router.get('/available', authorize('admin'), getAvailableGPTs);
-
 router.route('/:id')
   .get(getGPT)
   .put(updateGPT)
   .delete(deleteGPT);
-
 router.post('/:id/chat', chatWithGPT);
-
-// Rutas para threads
 router.post('/threads', createThread);
 router.post('/:id/threads', createThread);
 router.get('/threads/:threadId/messages', getThreadMessages);
 router.post('/:id/threads/:threadId/messages', sendMessageToAssistant);
 router.delete('/:id/threads', deleteGPTThreads);
-
-// Nuevas rutas para gestión de archivos
 router.route('/:id/files')
   .get(getAssistantUserFiles)
   .post(uploadAssistantFile);
-
 router.delete('/:id/files/:fileId', deleteAssistantFile);
 
 module.exports = router;
