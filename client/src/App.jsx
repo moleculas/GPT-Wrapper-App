@@ -3,6 +3,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { loadUser } from './redux/slices/authSlice';
 import AlertMessage from './components/ui/AlertMessage';
+import { ThemeProvider, CssBaseline } from '@mui/material';
+import { lightTheme, darkTheme } from './theme';
 
 // Páginas
 import HomePage from './pages/HomePage';
@@ -45,6 +47,10 @@ const AdminRoute = ({ children }) => {
 function App() {
   const dispatch = useDispatch();
   const { token } = useSelector(state => state.auth);
+  const { darkMode } = useSelector(state => state.ui);
+  
+  // Crear el tema basado en el modo oscuro/claro
+  const theme = darkMode ? darkTheme : lightTheme;
   
   useEffect(() => {
     if (token) {
@@ -53,31 +59,34 @@ function App() {
   }, [dispatch, token]);
   
   return (
-    <>
-      <AlertMessage />
-      
-      <Routes>
-        {/* Rutas públicas */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <div className={darkMode ? 'dark-mode' : 'light-mode'}>
+        <AlertMessage />
         
-        {/* Rutas protegidas */}
-        <Route path="/" element={<PrivateRoute><HomePage /></PrivateRoute>} />
-        <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
-        <Route path="/setup-2fa" element={<PrivateRoute><Setup2FAPage /></PrivateRoute>} />
-        <Route path="/gpts/:id" element={<PrivateRoute><GPTChatPage /></PrivateRoute>} />
-        <Route path="/settings" element={<PrivateRoute><SettingsView /></PrivateRoute>} />
-        
-        {/* Rutas de administrador */}
-        <Route path="/admin/gpts" element={<AdminRoute><AdminGPTsPage /></AdminRoute>} />
-        <Route path="/admin/gpts/new" element={<AdminRoute><GPTFormPage /></AdminRoute>} />
-        <Route path="/admin/gpts/edit/:id" element={<AdminRoute><GPTFormPage /></AdminRoute>} />
-        <Route path="/admin/gpts/:id/permissions" element={<AdminRoute><GPTPermissionsPage /></AdminRoute>} />
-        
-        {/* Ruta por defecto (redirecciona a home) */}
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-    </>
+        <Routes>
+          {/* Rutas públicas */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          
+          {/* Rutas protegidas */}
+          <Route path="/" element={<PrivateRoute><HomePage /></PrivateRoute>} />
+          <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+          <Route path="/setup-2fa" element={<PrivateRoute><Setup2FAPage /></PrivateRoute>} />
+          <Route path="/gpts/:id" element={<PrivateRoute><GPTChatPage /></PrivateRoute>} />
+          <Route path="/settings" element={<PrivateRoute><SettingsView /></PrivateRoute>} />
+          
+          {/* Rutas de administrador */}
+          <Route path="/admin/gpts" element={<AdminRoute><AdminGPTsPage /></AdminRoute>} />
+          <Route path="/admin/gpts/new" element={<AdminRoute><GPTFormPage /></AdminRoute>} />
+          <Route path="/admin/gpts/edit/:id" element={<AdminRoute><GPTFormPage /></AdminRoute>} />
+          <Route path="/admin/gpts/:id/permissions" element={<AdminRoute><GPTPermissionsPage /></AdminRoute>} />
+          
+          {/* Ruta por defecto (redirecciona a home) */}
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </div>
+    </ThemeProvider>
   );
 }
 

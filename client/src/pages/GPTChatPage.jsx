@@ -1,4 +1,3 @@
-// Modificación en client/src/pages/GPTChatPage.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
@@ -8,7 +7,8 @@ import {
   Avatar,
   CircularProgress,
   Button,
-  Collapse
+  Collapse,
+  Divider
 } from '@mui/material';
 import ResetIcon from '@mui/icons-material/RestartAlt';
 import FolderIcon from '@mui/icons-material/Folder';
@@ -82,7 +82,7 @@ const GPTChatPage = () => {
     }
 
     if (!message.trim()) return;
-    
+
     const tempUserMessage = {
       id: `temp-${Date.now()}`,
       role: 'user',
@@ -97,7 +97,7 @@ const GPTChatPage = () => {
     };
 
     setLocalMessages(prev => [...prev, tempUserMessage]);
-    
+
     dispatch(sendMessageToAssistant({
       gptId: id,
       threadId,
@@ -137,12 +137,11 @@ const GPTChatPage = () => {
     setResetDialogOpen(true);
   };
 
-  // Función para obtener las iniciales del usuario
   const getUserInitial = () => {
     if (user && user.name) {
       return user.name.charAt(0).toUpperCase();
     }
-    return 'U'; // Valor predeterminado si no hay usuario o nombre
+    return 'U';
   };
 
   const renderMessage = (msg) => {
@@ -234,7 +233,7 @@ const GPTChatPage = () => {
       </Box>
     );
   };
-  
+
   const visibleMessages = localMessages ? localMessages.filter(msg =>
     msg.metadata?.system_instruction !== "true"
   ) : [];
@@ -265,14 +264,14 @@ const GPTChatPage = () => {
       }}>
         {currentGPT ? (
           <>
-            {/* Cabecera del chat */}
+            {/* Cabecera del chat con contenido normal, sin borde */}
             <Box sx={{
               p: 2,
-              borderBottom: '1px solid rgba(0, 0, 0, 0.12)',
               flexShrink: 0,
               display: 'flex',
               justifyContent: 'space-between',
-              alignItems: 'center'
+              alignItems: 'center',
+              position: 'relative',
             }}>
               <Box>
                 <Typography variant="h6">{currentGPT.name}</Typography>
@@ -290,7 +289,12 @@ const GPTChatPage = () => {
                   onClick={() => setFilesManagerOpen(!filesManagerOpen)}
                   startIcon={<FolderIcon />}
                   endIcon={filesManagerOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                  sx={{ fontSize: '0.75rem' }}
+                  sx={{
+                    fontSize: '0.75rem',
+                    backgroundColor: filesManagerOpen ? (theme =>
+                      theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)'
+                    ) : 'transparent'
+                  }}
                 >
                   Archivos personalizados
                 </Button>
@@ -312,16 +316,29 @@ const GPTChatPage = () => {
               </Box>
             </Box>
 
+            {/* Divider que ocupa todo el ancho */}
+            <Divider sx={{
+              width: '100%',
+              borderColor: 'divider',
+              mt: 0,
+              mb: 0
+            }} />
+
             {/* Panel expandible para gestionar archivos del asistente */}
             <Collapse in={filesManagerOpen} timeout="auto">
               <Box sx={{
-                p: 2,
-                borderBottom: '1px solid rgba(0, 0, 0, 0.12)',
+                p: 3,
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: '8px',
                 position: 'relative',
                 zIndex: 10,
-                backgroundColor: 'background.default'
+                backgroundColor: theme => theme.palette.mode === 'dark' ? '#343541' : '#f5f5f5', //#f8f9fa
+                my: 2, 
+                mx: 0,
+                transition: 'all 0.3s ease',
               }}>
-                <AssistantFilesManager gptId={id} />
+                <AssistantFilesManager gptId={id} isEmbedded={true} />
               </Box>
             </Collapse>
 
@@ -411,7 +428,9 @@ const GPTChatPage = () => {
             {/* Área de entrada de mensajes */}
             <Box sx={{
               p: 2,
-              flexShrink: 0
+              flexShrink: 0,
+              borderTop: '1px solid',
+              borderColor: 'divider'
             }}>
               <Box
                 component="form"
@@ -446,7 +465,6 @@ const GPTChatPage = () => {
               </Box>
 
               <Box sx={{ mt: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-
                 <Typography
                   variant="caption"
                   color="primary"

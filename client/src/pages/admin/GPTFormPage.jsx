@@ -1,5 +1,3 @@
-// Ruta: client/src/pages/admin/GPTFormPage.jsx
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,

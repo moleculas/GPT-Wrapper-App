@@ -22,7 +22,7 @@ import { fetchGPTs } from '../../redux/slices/gptSlice';
 const Sidebar = ({ width }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { sidebarOpen } = useSelector(state => state.ui);
+  const { sidebarOpen, darkMode } = useSelector(state => state.ui);
   const { gpts, loading } = useSelector(state => state.gpts);
   const { isAuthenticated, user } = useSelector(state => state.auth);
 
@@ -46,10 +46,10 @@ const Sidebar = ({ width }) => {
         height: '65px',
         display: 'flex',
         alignItems: 'center',
-        bgcolor: '#f5f5f5',
+        bgcolor: darkMode ? '#202123' : '#f5f5f5',
         boxShadow: 'none',
         position: 'relative',
-        borderBottom: '1px solid #e0e0e0',
+        borderBottom: darkMode ? '1px solid #444654' : '1px solid #e0e0e0',
       }}>
         {/* Header en blanco */}
       </Box>
@@ -59,20 +59,30 @@ const Sidebar = ({ width }) => {
         <ListItemButton
           onClick={() => handleNavigation('/')}
           sx={{
-            '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' }
+            '&:hover': { 
+              backgroundColor: darkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)' 
+            }
           }}
         >
-          <ListItemIcon>
+          <ListItemIcon sx={{ color: darkMode ? '#c5c5d2' : 'inherit' }}>
             <HomeIcon />
           </ListItemIcon>
-          <ListItemText primary="Inicio" />
+          <ListItemText 
+            primary="Inicio" 
+            primaryTypographyProps={{ 
+              sx: { color: darkMode ? '#ffffff' : 'inherit' } 
+            }}
+          />
         </ListItemButton>
 
-        <Divider sx={{ my: 1 }} />
+        <Divider sx={{ my: 1, borderColor: darkMode ? '#444654' : '#e0e0e0' }} />
 
         {/* Título "Mis GPTs" antes del listado */}
         <ListItem sx={{ px: 2, py: 1 }}>
-          <Typography variant="subtitle2" color="textSecondary">
+          <Typography 
+            variant="subtitle2" 
+            sx={{ color: darkMode ? '#c5c5d2' : 'text.secondary' }}
+          >
             Mis Asistentes
           </Typography>
         </ListItem>
@@ -84,7 +94,9 @@ const Sidebar = ({ width }) => {
                 onClick={() => handleNavigation('/admin/gpts/new')}
                 sx={{
                   color: 'primary.main',
-                  '&:hover': { backgroundColor: 'rgba(16, 163, 127, 0.04)' }
+                  '&:hover': { 
+                    backgroundColor: darkMode ? 'rgba(16, 163, 127, 0.12)' : 'rgba(16, 163, 127, 0.04)' 
+                  }
                 }}
               >
                 <ListItemIcon>
@@ -94,11 +106,16 @@ const Sidebar = ({ width }) => {
               </ListItemButton>
             )}
 
-            <Divider sx={{ my: 0 }} />
+            <Divider sx={{ my: 0, borderColor: darkMode ? '#444654' : '#e0e0e0' }} />
 
             {loading ? (
               <ListItem sx={{ p: 2 }}>
-                <ListItemText primary="Cargando GPTs..." />
+                <ListItemText 
+                  primary="Cargando GPTs..." 
+                  primaryTypographyProps={{ 
+                    sx: { color: darkMode ? '#c5c5d2' : 'inherit' } 
+                  }}
+                />
               </ListItem>
             ) : (
               gpts.length > 0 ? (
@@ -111,8 +128,10 @@ const Sidebar = ({ width }) => {
                       pl: 2,
                       pr: 1,
                       display: 'flex',
-                      alignItems: 'flex-start', // Alinear al inicio para mejor distribución vertical
-                      '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' }
+                      alignItems: 'flex-start',
+                      '&:hover': { 
+                        backgroundColor: darkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)' 
+                      }
                     }}
                   >
                     <ChatIcon
@@ -131,19 +150,20 @@ const Sidebar = ({ width }) => {
                           fontWeight: 500,
                           lineHeight: 1.3,
                           mb: 0.6,
-                          overflow: 'hidden'
+                          overflow: 'hidden',
+                          color: darkMode ? '#ffffff' : 'inherit'
                         }}
                       >
                         {gpt.name}
                       </Typography>
                       <Typography
                         variant="caption"
-                        color="text.secondary"
                         sx={{
                           display: 'block',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
+                          whiteSpace: 'nowrap',
+                          color: darkMode ? '#c5c5d2' : 'text.secondary'
                         }}
                       >
                         {gpt.description}
@@ -153,7 +173,12 @@ const Sidebar = ({ width }) => {
                 ))
               ) : (
                 <ListItem sx={{ p: 2 }}>
-                  <ListItemText primary="No hay GPTs disponibles" />
+                  <ListItemText 
+                    primary="No hay GPTs disponibles" 
+                    primaryTypographyProps={{ 
+                      sx: { color: darkMode ? '#c5c5d2' : 'inherit' } 
+                    }}
+                  />
                 </ListItem>
               )
             )}
@@ -164,14 +189,24 @@ const Sidebar = ({ width }) => {
       {/* Espaciador flexible para empujar el botón de configuración al fondo */}
       <Box sx={{ flexGrow: 1 }} />
 
-      <Box sx={{ borderTop: '1px solid #e0e0e0' }}>
+      <Box sx={{ borderTop: darkMode ? '1px solid #444654' : '1px solid #e0e0e0' }}>
         <ListItemButton
           onClick={() => handleNavigation('/settings')}
+          sx={{
+            '&:hover': { 
+              backgroundColor: darkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)' 
+            }
+          }}
         >
-          <ListItemIcon>
+          <ListItemIcon sx={{ color: darkMode ? '#c5c5d2' : 'inherit' }}>
             <SettingsIcon />
           </ListItemIcon>
-          <ListItemText primary="Configuración" />
+          <ListItemText 
+            primary="Configuración" 
+            primaryTypographyProps={{ 
+              sx: { color: darkMode ? '#ffffff' : 'inherit' } 
+            }}
+          />
         </ListItemButton>
       </Box>
     </>
@@ -188,13 +223,15 @@ const Sidebar = ({ width }) => {
           display: { xs: 'block', md: 'none' },
           '& .MuiDrawer-paper': {
             width: width,
-            bgcolor: '#f5f5f5',
+            bgcolor: darkMode ? '#202123' : '#f5f5f5',
             boxShadow: 'none',
             display: 'flex',
             flexDirection: 'column',
-            height: '100%'
+            height: '100%',
+            borderRight: darkMode ? '1px solid #444654' : '1px solid #e0e0e0',
           },
         }}
+        className="sidebar"
       >
         {sidebarContent}
       </Drawer>
@@ -207,13 +244,15 @@ const Sidebar = ({ width }) => {
           display: { xs: 'none', md: 'block' },
           '& .MuiDrawer-paper': {
             width: width,
-            bgcolor: '#f5f5f5',
+            bgcolor: darkMode ? '#202123' : '#f5f5f5',
             boxShadow: 'none',
             display: 'flex',
             flexDirection: 'column',
-            height: '100%'
+            height: '100%',
+            borderRight: darkMode ? '1px solid #444654' : '1px solid #e0e0e0',
           },
         }}
+        className="sidebar"
       >
         {sidebarContent}
       </Drawer>

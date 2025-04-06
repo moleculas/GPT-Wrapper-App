@@ -28,28 +28,28 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { uploadAssistantFiles, getAssistantUserFiles, deleteAssistantFile, clearUploadSuccess } from '../../redux/slices/gptSlice';
 
-const AssistantFilesManager = ({ gptId }) => {
+const AssistantFilesManager = ({ gptId, isEmbedded = false }) => {
   const dispatch = useDispatch();
   const { userFiles, loading, error, uploadSuccess } = useSelector(state => state.gpts.files);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const fileInputRef = useRef(null);
 
-  const MAX_FILE_SIZE = 20 * 1024 * 1024; 
+  const MAX_FILE_SIZE = 20 * 1024 * 1024;
   const ALLOWED_FILE_TYPES = [
     'image/jpeg', 'image/png', 'image/gif', 'image/webp',
     'application/pdf', 'text/plain', 'text/csv',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation' 
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation'
   ];
-  
+
   useEffect(() => {
     if (gptId) {
       dispatch(getAssistantUserFiles(gptId));
     }
   }, [dispatch, gptId]);
-  
+
   useEffect(() => {
     if (uploadSuccess) {
       const timer = setTimeout(() => {
@@ -58,39 +58,39 @@ const AssistantFilesManager = ({ gptId }) => {
       return () => clearTimeout(timer);
     }
   }, [uploadSuccess, dispatch]);
-  
+
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files);
     await processFiles(files);
-    
+
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
-  
+
   const processFiles = async (files) => {
     const validFiles = [];
     const errors = [];
 
     for (const file of files) {
-      
+
       if (!ALLOWED_FILE_TYPES.includes(file.type)) {
         errors.push(`Tipo de archivo no permitido: ${file.type}`);
         continue;
       }
-      
+
       if (file.size > MAX_FILE_SIZE) {
         errors.push(`El archivo ${file.name} excede el tamaño máximo permitido (20MB)`);
         continue;
       }
-      
+
       try {
         const base64Data = await readFileAsBase64(file);
         validFiles.push({
           name: file.name,
           type: file.type,
           size: file.size,
-          data: base64Data.split(',')[1] 
+          data: base64Data.split(',')[1]
         });
       } catch (error) {
         errors.push(`Error al leer el archivo ${file.name}: ${error.message}`);
@@ -105,7 +105,7 @@ const AssistantFilesManager = ({ gptId }) => {
       setSelectedFiles(prev => [...prev, ...validFiles]);
     }
   };
-  
+
   const readFileAsBase64 = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -124,7 +124,7 @@ const AssistantFilesManager = ({ gptId }) => {
     }))
       .unwrap()
       .then(() => {
-        setSelectedFiles([]);        
+        setSelectedFiles([]);
         setTimeout(() => {
           dispatch(getAssistantUserFiles(gptId));
         }, 1000);
@@ -134,11 +134,11 @@ const AssistantFilesManager = ({ gptId }) => {
       });
   };
 
-  
+
   const handleDeleteConfirm = (file) => {
     setConfirmDelete(file);
   };
-  
+
   const confirmDeleteFile = () => {
     if (!confirmDelete) return;
 
@@ -154,24 +154,24 @@ const AssistantFilesManager = ({ gptId }) => {
         console.error('Error al eliminar archivo:', error);
       });
   };
-  
+
   const cancelDelete = () => {
     setConfirmDelete(null);
   };
-  
+
   const handleRemoveSelected = (index) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleRefresh = () => {
-    
+
     dispatch({ type: 'gpts/getFiles/pending' });
-    
+
     setTimeout(() => {
       dispatch(getAssistantUserFiles(gptId));
-    }, 2000); 
+    }, 2000);
   };
-  
+
   const getFileIcon = (filename) => {
     if (!filename) return <FileIcon />;
 
@@ -187,21 +187,26 @@ const AssistantFilesManager = ({ gptId }) => {
       return <FileIcon />;
     }
   };
-  
+
   const formatFileSize = (bytes) => {
     if (!bytes || bytes === 0) return '0 B';
     if (bytes < 1024) return `${bytes} B`;
     else if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
     else return `${(bytes / 1048576).toFixed(1)} MB`;
   };
-  
+
   const formatDate = (timestamp) => {
     if (!timestamp) return 'Fecha desconocida';
     return new Date(timestamp * 1000).toLocaleString();
   };
 
   return (
-    <Box>
+    <Box sx={{  
+      ...(isEmbedded && {
+        maxHeight: '400px', // Limitar altura máxima cuando está embebido
+        overflow: 'auto'    // Permitir scroll si el contenido es muy largo
+      })
+    }}>
       <Box sx={{ mb: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6">
@@ -233,7 +238,7 @@ const AssistantFilesManager = ({ gptId }) => {
 
         <Typography variant="body2" color="textSecondary" gutterBottom>
           Los archivos que subas estarán disponibles para el asistente en todas las conversaciones.
-        </Typography>                
+        </Typography>
       </Box>
 
       {/* Mensajes de estado */}
