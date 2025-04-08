@@ -203,3 +203,56 @@ const sendTokenResponse = (user, statusCode, res) => {
     }
   });
 };
+
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        error: 'Por favor proporciona la contraseña actual y la nueva'
+      });
+    }
+
+    const user = await User.findById(req.user.id).select('+password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'Usuario no encontrado'
+      });
+    }
+
+    if (!user.password) {
+      return res.status(500).json({
+        success: false,
+        error: 'Error con los datos del usuario'
+      });
+    }
+
+    const isMatch = await user.matchPassword(currentPassword);
+
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        error: 'La contraseña actual es incorrecta'
+      });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Contraseña actualizada correctamente'
+    });
+
+  } catch (err) {
+    console.error('Error en changePassword:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message || 'Error del servidor al cambiar la contraseña'
+    });
+  }
+};

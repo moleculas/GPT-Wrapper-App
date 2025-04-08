@@ -1,19 +1,26 @@
 import React, { useState } from 'react';
-import { 
-  Box, 
-  Typography, 
-  TextField, 
-  Button, 
-  Paper, 
+import {
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Paper,
   Grid,
   CircularProgress,
   Alert,
   Card,
   CardContent,
   Divider,
-  Switch,
-  FormControlLabel
+  ListItem,
+  ListItemIcon,
+  ListItemText
 } from '@mui/material';
+import {
+  Security,
+  VpnKey,
+  Shield,
+  VerifiedUser
+} from '@mui/icons-material';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/layout/MainLayout';
@@ -23,33 +30,36 @@ const ProfilePage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user, loading } = useSelector(state => state.auth);
-  
+
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || ''
   });
-  
+
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
   };
-  
+
   const handleSubmit = (e) => {
     e.preventDefault();
     // Aquí iría la lógica para actualizar el perfil de usuario
-    // Por ahora solo mostraremos una alerta
-    dispatch(addAlert({ 
-      message: 'Perfil actualizado correctamente', 
-      type: 'success' 
+    dispatch(addAlert({
+      message: 'Perfil actualizado correctamente',
+      type: 'success'
     }));
   };
-  
+
   const handle2FASetup = () => {
     navigate('/setup-2fa');
   };
-  
+
+  const handleChangePassword = () => {
+    navigate('/change-password');
+  };
+
   if (!user) {
     return (
       <MainLayout>
@@ -59,14 +69,14 @@ const ProfilePage = () => {
       </MainLayout>
     );
   }
-  
+
   return (
     <MainLayout>
       <Box sx={{ flexGrow: 1, pt: 2 }}>
         <Typography variant="h4" component="h1" gutterBottom>
           Perfil de usuario
         </Typography>
-        
+
         <Grid container spacing={4}>
           <Grid item xs={12} md={6}>
             <Paper sx={{ p: 3 }}>
@@ -74,7 +84,7 @@ const ProfilePage = () => {
                 Información personal
               </Typography>
               <Divider sx={{ mb: 3 }} />
-              
+
               <Box component="form" onSubmit={handleSubmit}>
                 <TextField
                   fullWidth
@@ -86,7 +96,7 @@ const ProfilePage = () => {
                   variant="outlined"
                   margin="normal"
                 />
-                
+
                 <TextField
                   fullWidth
                   required
@@ -99,7 +109,7 @@ const ProfilePage = () => {
                   disabled
                   helperText="El correo electrónico no puede ser modificado"
                 />
-                
+
                 <Button
                   type="submit"
                   variant="contained"
@@ -112,62 +122,79 @@ const ProfilePage = () => {
               </Box>
             </Paper>
           </Grid>
-          
+
           <Grid item xs={12} md={6}>
             <Card>
               <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Seguridad
-                </Typography>
-                <Divider sx={{ mb: 3 }} />
-                
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle1" gutterBottom>
-                    Verificación en dos pasos
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Security sx={{ fontSize: 24, mr: 1, color: 'primary.main' }} />
+                  <Typography variant="h6">
+                    Seguridad
                   </Typography>
-                  <Box sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'space-between'
-                  }}>
-                    <Typography variant="body2" color="textSecondary">
-                      {user.twoFactorEnabled 
-                        ? 'La verificación en dos pasos está activada' 
-                        : 'Mejora la seguridad de tu cuenta activando la verificación en dos pasos'}
-                    </Typography>
-                    
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={user.twoFactorEnabled}
-                          onChange={handle2FASetup}
-                          disabled={user.twoFactorEnabled}
-                        />
-                      }
-                      label=""
-                    />
-                  </Box>
                 </Box>
-                
-                <Divider sx={{ my: 3 }} />
-                
-                <Typography variant="subtitle1" gutterBottom>
-                  Cambiar contraseña
-                </Typography>
-                <Button 
-                  variant="outlined" 
-                  color="primary"
-                  // Esta funcionalidad se implementaría en un paso posterior
-                  onClick={() => dispatch(addAlert({ 
-                    message: 'Funcionalidad de cambio de contraseña en desarrollo', 
-                    type: 'info' 
-                  }))}
-                >
-                  Cambiar contraseña
-                </Button>
+                <Divider sx={{ mb: 3 }} />
+
+                {/* Sección de verificación en dos pasos */}
+                <Box sx={{ mb: 3 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Shield
+                        color={user.twoFactorEnabled ? "success" : "action"}
+                        sx={{ mr: 2 }}
+                      />
+                      <Typography variant="subtitle1">
+                        Verificación en dos pasos
+                      </Typography>
+                    </Box>
+                    {!user.twoFactorEnabled && (
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        onClick={handle2FASetup}
+                        size="small"
+                      >
+                        Activar
+                      </Button>
+                    )}
+                    {user.twoFactorEnabled && (
+                      <VerifiedUser color="success" />
+                    )}
+                  </Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ px: 6 }}>
+                    {user.twoFactorEnabled
+                      ? "La verificación en dos pasos está activada"
+                      : "Mejora la seguridad de tu cuenta activando la verificación en dos pasos"
+                    }
+                  </Typography>
+                </Box>
+
+                <Divider sx={{ my: 2 }} />
+
+                {/* Sección de cambio de contraseña */}
+                <Box sx={{ mb: 1 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <VpnKey sx={{ mr: 2 }} />
+                      <Typography variant="subtitle1">
+                        Cambiar contraseña
+                      </Typography>
+                    </Box>
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      size="small"
+                      onClick={handleChangePassword}
+                    >
+                      Cambiar
+                    </Button>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ px: 6 }}>
+                    Actualiza tu contraseña regularmente para mayor seguridad
+                  </Typography>
+                </Box>
               </CardContent>
             </Card>
-            
+
             {user.role === 'admin' && (
               <Card sx={{ mt: 3 }}>
                 <CardContent>
@@ -175,9 +202,9 @@ const ProfilePage = () => {
                     Administración
                   </Typography>
                   <Divider sx={{ mb: 3 }} />
-                  
-                  <Button 
-                    variant="contained" 
+
+                  <Button
+                    variant="contained"
                     color="primary"
                     onClick={() => navigate('/admin/gpts')}
                     fullWidth

@@ -93,6 +93,26 @@ export const loadUser = createAsyncThunk(
   }
 );
 
+export const changePassword = createAsyncThunk(
+  'auth/changePassword',
+  async (passwordData, { getState, rejectWithValue }) => {
+    try {
+      const token = getState().auth.token;
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
+      };
+      
+      const response = await axios.post(`${API_URL}/change-password`, passwordData, config);
+      return response.data;
+    } catch (error) {      
+      return rejectWithValue(error.response?.data || { error: 'Error al cambiar la contraseña' });
+    }
+  }
+);
+
 const initialState = {
   token: null,
   isAuthenticated: false,
@@ -220,7 +240,17 @@ const authSlice = createSlice({
         state.token = null;
         state.isAuthenticated = false;
         state.user = null;
-      });
+      })
+      .addCase(changePassword.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(changePassword.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(changePassword.rejected, (state, action) => {
+        state.loading = false;
+      })
   }
 });
 
