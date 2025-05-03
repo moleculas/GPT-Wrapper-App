@@ -118,7 +118,7 @@ const Sidebar = ({ width }) => {
                 />
               </ListItem>
             ) : (
-              gpts.length > 0 ? (
+              gpts && gpts.length > 0 ? (
                 gpts.map(gpt => (
                   <ListItemButton
                     key={gpt._id}

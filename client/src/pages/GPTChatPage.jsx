@@ -31,8 +31,8 @@ import AssistantFilesManager from '../components/gpt/AssistantFilesManager';
 const GPTChatPage = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
-  const { currentGPT, loading: gptLoading } = useSelector(state => state.gpts);
-  const { threadId, messages, loading: chatLoading, error } = useSelector(state => state.gpts.chat || {});
+  const { currentGPT, loading: gptLoading, chat = {} } = useSelector(state => state.gpts);
+  const { threadId, messages = [], loading: chatLoading, error } = chat; // Safe destructuring with defaults
   const { user } = useSelector(state => state.auth);
 
   const [message, setMessage] = useState('');
